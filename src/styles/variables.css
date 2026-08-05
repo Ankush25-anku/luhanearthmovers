@@ -1,0 +1,120 @@
+/**
+ * Design Tokens — VNS Prime Infra
+ * Single source of truth for color, spacing, radius, shadow, z-index,
+ * motion and layout primitives. Framework-agnostic custom properties;
+ * a subset is re-exposed to Tailwind via `@theme inline` in globals.css.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- */
+  /* Color                                                             */
+  /* ---------------------------------------------------------------- */
+  --color-primary: #f97316;
+  --color-primary-hover: #ea6a0e;
+  --color-accent: #ff8c42;
+
+  --color-background: #111111;
+  --color-background-secondary: #1a1a1a;
+  --color-surface: #262626;
+  --color-surface-hover: #2f2f2f;
+
+  --color-text: #fafafa;
+  --color-text-muted: #bdbdbd;
+  --color-text-faint: #7a7a7a;
+
+  --color-border: color-mix(in srgb, white 10%, transparent);
+  --color-border-strong: color-mix(in srgb, white 18%, transparent);
+
+  --color-overlay: color-mix(in srgb, var(--color-background) 72%, transparent);
+
+  /* ---------------------------------------------------------------- */
+  /* Spacing — base scale (8px rhythm)                                 */
+  /* ---------------------------------------------------------------- */
+  --space-1: 0.25rem; /* 4px  */
+  --space-2: 0.5rem; /* 8px  */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.5rem; /* 24px */
+  --space-6: 2rem; /* 32px */
+  --space-7: 3rem; /* 48px */
+  --space-8: 4rem; /* 64px */
+  --space-9: 6rem; /* 96px */
+  --space-10: 8rem; /* 128px */
+
+  /* Section (vertical rhythm) spacing per CLAUDE.md breakpoint rules */
+  --space-section-mobile-min: 64px;
+  --space-section-mobile-max: 90px;
+  --space-section-tablet-min: 90px;
+  --space-section-tablet-max: 120px;
+  --space-section-desktop-min: 120px;
+  --space-section-desktop-max: 180px;
+
+  /* Container inline padding — mirrors px-6 / px-8 / px-12 */
+  --container-padding-mobile: 1.5rem;
+  --container-padding-tablet: 2rem;
+  --container-padding-desktop: 3rem;
+
+  /* ---------------------------------------------------------------- */
+  /* Border radius                                                     */
+  /* ---------------------------------------------------------------- */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-full: 9999px;
+
+  /* ---------------------------------------------------------------- */
+  /* Shadow                                                             */
+  /* ---------------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px color-mix(in srgb, black 40%, transparent);
+  --shadow-md: 0 8px 24px color-mix(in srgb, black 45%, transparent);
+  --shadow-lg: 0 24px 48px color-mix(in srgb, black 50%, transparent);
+  --shadow-xl: 0 40px 80px color-mix(in srgb, black 55%, transparent);
+  --shadow-elevated: 0 30px 60px -12px color-mix(in srgb, black 65%, transparent);
+
+  --shadow-glow-primary: 0 0 40px color-mix(in srgb, var(--color-primary) 45%, transparent);
+  --shadow-glow-strong: 0 0 70px color-mix(in srgb, var(--color-primary) 65%, transparent);
+
+  /* ---------------------------------------------------------------- */
+  /* Z-index scale                                                      */
+  /* ---------------------------------------------------------------- */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 200;
+  --z-header: 500;
+  --z-overlay: 800;
+  --z-modal: 900;
+  --z-toast: 950;
+  --z-max: 9999;
+
+  /* ---------------------------------------------------------------- */
+  /* Motion — durations & easing                                       */
+  /* ---------------------------------------------------------------- */
+  --duration-fast: 200ms;
+  --duration-base: 400ms;
+  --duration-slow: 600ms;
+  --duration-cinematic: 1000ms;
+
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-soft-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---------------------------------------------------------------- */
+  /* Blur                                                               */
+  /* ---------------------------------------------------------------- */
+  --blur-sm: 4px;
+  --blur-md: 12px;
+  --blur-lg: 24px;
+  --blur-xl: 40px;
+  --blur-glass: 20px;
+
+  /* ---------------------------------------------------------------- */
+  /* Max widths                                                         */
+  /* ---------------------------------------------------------------- */
+  --max-w-page: 1440px;
+  --max-w-content: 1280px;
+  --max-w-narrow: 960px;
+  --max-w-prose: 720px;
+}

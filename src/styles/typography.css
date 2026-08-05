@@ -1,0 +1,125 @@
+/**
+ * Typography System — VNS Prime Infra
+ * Font tokens + fluid type scale (Hero → Caption).
+ * Google Fonts are imported from globals.css (all @import rules must be
+ * contiguous at the top of the final bundled stylesheet).
+ */
+
+:root {
+  /* ---------------------------------------------------------------- */
+  /* Font families                                                      */
+  /* ---------------------------------------------------------------- */
+  --font-heading: "Space Grotesk", var(--font-geist-sans, sans-serif), sans-serif;
+  --font-body: "Inter", var(--font-geist-sans, sans-serif), sans-serif;
+  --font-number: "Bebas Neue", var(--font-geist-sans, sans-serif), sans-serif;
+
+  /* ---------------------------------------------------------------- */
+  /* Fluid type scale — clamp(min, preferred, max)                     */
+  /* ---------------------------------------------------------------- */
+  --text-hero: clamp(3rem, 2rem + 5vw, 7.5rem);
+  --text-display: clamp(2.5rem, 1.75rem + 3.5vw, 5.5rem);
+  --text-h1: clamp(2.25rem, 1.75rem + 2.2vw, 4rem);
+  --text-h2: clamp(1.75rem, 1.4rem + 1.5vw, 2.75rem);
+  --text-h3: clamp(1.375rem, 1.15rem + 0.9vw, 1.875rem);
+  --text-body-lg: clamp(1.125rem, 1.05rem + 0.3vw, 1.375rem);
+  --text-body: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
+  --text-caption: clamp(0.75rem, 0.72rem + 0.1vw, 0.875rem);
+
+  --leading-hero: 1.02;
+  --leading-display: 1.05;
+  --leading-heading: 1.15;
+  --leading-body: 1.6;
+  --leading-caption: 1.4;
+
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.04em;
+  --tracking-caption: 0.08em;
+}
+
+/* ---------------------------------------------------------------- */
+/* Type scale utility classes                                        */
+/* ---------------------------------------------------------------- */
+@layer utilities {
+  .text-hero {
+    font-family: var(--font-heading);
+    font-size: var(--text-hero);
+    font-weight: 700;
+    line-height: var(--leading-hero);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .text-display {
+    font-family: var(--font-heading);
+    font-size: var(--text-display);
+    font-weight: 700;
+    line-height: var(--leading-display);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .text-h1 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h1);
+    font-weight: 600;
+    line-height: var(--leading-heading);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .text-h2 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h2);
+    font-weight: 600;
+    line-height: var(--leading-heading);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .text-h3 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h3);
+    font-weight: 600;
+    line-height: var(--leading-heading);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  .text-body-lg {
+    font-family: var(--font-body);
+    font-size: var(--text-body-lg);
+    font-weight: 400;
+    line-height: var(--leading-body);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  .text-body {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 400;
+    line-height: var(--leading-body);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  .text-caption {
+    font-family: var(--font-body);
+    font-size: var(--text-caption);
+    font-weight: 500;
+    line-height: var(--leading-caption);
+    letter-spacing: var(--tracking-caption);
+    text-transform: uppercase;
+  }
+
+  /* Numeric / stat display (Bebas Neue) — e.g. counters, metrics, years */
+  .text-number {
+    font-family: var(--font-number);
+    font-weight: 400;
+    letter-spacing: var(--tracking-wide);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Gradient text — primary → accent, for emphasis headlines */
+  .text-gradient {
+    background-image: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+}
