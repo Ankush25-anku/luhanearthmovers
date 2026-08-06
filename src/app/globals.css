@@ -334,6 +334,15 @@ section[id] {
     -webkit-backdrop-filter: blur(12px);
   }
 
+  /* Decorative glow blobs (`blur-3xl` = filter: blur(64px)) appear a dozen
+     times across sections — each one is a real GPU rasterization cost that
+     a real mobile GPU pays every time its layer repaints, invisible to
+     Chrome DevTools' CPU-only mobile simulation. Tighter radius, same soft
+     glow. */
+  .blur-3xl {
+    filter: blur(32px);
+  }
+
   img {
     transform: translateZ(0);
   }

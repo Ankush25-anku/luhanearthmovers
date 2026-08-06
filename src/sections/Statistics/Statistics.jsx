@@ -187,6 +187,20 @@ export default function Statistics() {
           activatePanel(panels[index], PANEL_STATS[index], activeCleanupRef);
         };
 
+        // The active panel's choreography (rotating ring, pulsing glow) is
+        // an infinite `repeat: -1` tween — without pausing it, it keeps
+        // running at full cost forever after the user scrolls past this
+        // pinned section (onUpdate simply stops firing, it never "ends").
+        // onLeave/onLeaveBack pause it exactly when the section leaves the
+        // viewport; onEnter/onEnterBack resume it, mirroring an
+        // IntersectionObserver's enter/exit without a second observer
+        // duplicating what this ScrollTrigger already tracks.
+        const pauseActive = () => {
+          if (activeIndex === -1) return;
+          deactivatePanel(panels[activeIndex], activeCleanupRef);
+          activeIndex = -1;
+        };
+
         const result = pinSectionWithTimeline(
           pinTargetRef.current,
           (timeline) => {
@@ -206,10 +220,18 @@ export default function Statistics() {
               const idx = Math.min(panels.length - 1, Math.floor(self.progress * panels.length));
               setActive(idx);
             },
+            onEnter: () => setActive(0),
+            onEnterBack: () => setActive(panels.length - 1),
+            onLeave: pauseActive,
+            onLeaveBack: pauseActive,
           }
         );
 
-        setActive(0);
+        // Covers the (uncommon) case where the page loads already scrolled
+        // to this section — every other case is handled by onEnter/onEnterBack above.
+        if (result?.scrollTrigger?.isActive) {
+          setActive(0);
+        }
 
         return () => {
           result?.scrollTrigger?.kill();

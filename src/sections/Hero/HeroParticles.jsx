@@ -9,7 +9,9 @@ const MAX_DELTA = 0.05; // clamp dt (seconds) so a backgrounded tab can't jump p
 const HAZE_SPRITE_SIZE = 128; // px, pre-blurred once and scaled per particle at draw time
 
 function getMaxDpr() {
-  return window.innerWidth < 768 ? 1.5 : 2;
+  // Real mobile GPUs can't afford the same fill-rate as desktop's — capped
+  // to 1 (was 1.5) below 768px; desktop/tablet keep the original max of 2.
+  return window.innerWidth < 768 ? 1 : 2;
 }
 
 function getParticleCount() {

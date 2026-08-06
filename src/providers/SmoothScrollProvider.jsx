@@ -29,11 +29,11 @@ if (typeof window !== "undefined") {
  */
 export default function SmoothScrollProvider({ children }) {
   useEffect(() => {
-    // Desktop keeps its exact original feel. Below 1024px only: a shorter
-    // duration (less lingering momentum after the finger lifts) and a
-    // higher touch lerp (content tracks the finger more closely, less
-    // perceived lag) — both explicitly mobile/tablet-only tuning, touch
-    // virtualization itself (`syncTouch`) stays on everywhere.
+    // Desktop keeps its exact original feel (untouched below). Below
+    // 1024px, only `duration` is shortened — less lingering momentum after
+    // the finger lifts — which still applies to any wheel/programmatic
+    // scroll a hybrid touch+wheel device (e.g. a tablet with a trackpad)
+    // might trigger.
     const isMobileOrTablet = window.innerWidth < 1024;
 
     const lenis = new Lenis({
@@ -42,11 +42,20 @@ export default function SmoothScrollProvider({ children }) {
       smoothWheel: true,
       wheelMultiplier: 1,
       touchMultiplier: 1,
-      // Virtualize touch drags too (not just wheel) — without this, touch
-      // scroll falls back to the browser's native momentum scroll, which
-      // is exactly the "native scrolling feeling on mobile" we don't want.
-      syncTouch: true,
-      syncTouchLerp: isMobileOrTablet ? 0.1 : 0.075,
+      // `syncTouch` replays every touchmove through JS on the main thread so
+      // touch tracks the exact same easing curve as wheel scroll. That's
+      // cheap on a desktop's GPU/CPU — which is why Chrome DevTools' mobile
+      // *simulation* (still running on desktop hardware) looks perfectly
+      // smooth — but on a real phone it fights canvas draws and
+      // ScrollTrigger updates for main-thread time every single frame,
+      // which is the actual root cause of "smooth in DevTools, hangs on a
+      // real device." With it off, touch scroll runs natively on the
+      // compositor thread (GPU-driven, effectively free) on every touch
+      // device, and Lenis just listens to the resulting native scroll
+      // position — still fully active, still keeping ScrollTrigger in
+      // sync — it only stops re-animating what the OS already animates
+      // better. Desktop wheel/trackpad input is entirely unaffected.
+      syncTouch: false,
     });
 
     window.lenis = lenis;

@@ -19,7 +19,9 @@ function getFrameBatchSize() {
 
 /** Backing-store DPR cap — tighter on small phones, where fill-rate is scarcest. */
 function getMaxDpr() {
-  return window.innerWidth < 768 ? 1.5 : 2;
+  // Real mobile GPUs can't afford the same fill-rate as desktop's — capped
+  // to 1 (was 1.5) below 768px; desktop/tablet keep the original max of 2.
+  return window.innerWidth < 768 ? 1 : 2;
 }
 
 /**
