@@ -75,7 +75,11 @@
     color-scheme: dark;
     scrollbar-width: thin;
     scrollbar-color: var(--color-surface) var(--color-background-secondary);
-    scroll-behavior: smooth;
+    /* Lenis (src/providers/SmoothScrollProvider.jsx) is the only smooth-scroll
+       mechanism in the app — native `scroll-behavior: smooth` runs its own
+       scroll timeline in parallel and fights Lenis's virtualized one on any
+       anchor jump or programmatic scroll, which reads as stutter/freezes. */
+    scroll-behavior: auto;
   }
 
   body {

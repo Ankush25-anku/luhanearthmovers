@@ -65,7 +65,7 @@ function mapProgressToFrame(progress) {
 }
 
 function getFramePath(frameNumber) {
-  return `/assets/hero/frames/frame_${String(frameNumber).padStart(4, "0")}.png`;
+  return `/assets/hero/frames/frame_${String(frameNumber).padStart(4, "0")}.webp`;
 }
 
 /** Runs `callback` during idle time where supported, else a short timeout. */

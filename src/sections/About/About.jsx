@@ -66,8 +66,8 @@ export default function About() {
                     src="/assets/images/about-foundation.webp"
                     alt="VNS Prime Infra foundation engineering work"
                     fill
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                     className="object-cover"
-                    priority
                   />
                 </div>
               </GlassCard>

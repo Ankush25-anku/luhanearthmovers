@@ -7,6 +7,12 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
+
+  // Mobile browsers fire `resize` when the address bar collapses/expands
+  // mid-scroll — without this, ScrollTrigger re-measures every trigger's
+  // position on that resize, which is the single most common cause of
+  // scroll-jank on mobile/tablet with GSAP.
+  ScrollTrigger.config({ ignoreMobileResize: true });
 }
 
 /**
