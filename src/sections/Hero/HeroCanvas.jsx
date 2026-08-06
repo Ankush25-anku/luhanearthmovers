@@ -9,7 +9,13 @@ if (typeof window !== "undefined") {
 }
 
 const TOTAL_FRAMES = 180;
-const FRAME_BATCH_SIZE = 15; // frames 2–180 load in 12 small batches, not one 179-wide burst
+const FRAME_BATCH_SIZE_DESKTOP = 15; // unchanged: frames 2–180 in 12 small batches
+const FRAME_BATCH_SIZE_MOBILE = 8; // smaller batches — lighter decode/memory burst per idle tick
+
+/** Below 1024px only — desktop keeps its original batch size exactly. */
+function getFrameBatchSize() {
+  return window.innerWidth < 1024 ? FRAME_BATCH_SIZE_MOBILE : FRAME_BATCH_SIZE_DESKTOP;
+}
 
 /** Backing-store DPR cap — tighter on small phones, where fill-rate is scarcest. */
 function getMaxDpr() {
@@ -210,7 +216,7 @@ export default function HeroCanvas() {
 
     const loadRemainingFrames = (startIndex) => {
       if (cancelled) return;
-      const endIndex = Math.min(startIndex + FRAME_BATCH_SIZE, TOTAL_FRAMES);
+      const endIndex = Math.min(startIndex + getFrameBatchSize(), TOTAL_FRAMES);
 
       for (let i = startIndex; i < endIndex; i += 1) {
         const frameNumber = i + 1;

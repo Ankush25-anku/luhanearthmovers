@@ -169,6 +169,9 @@ export default function Statistics() {
         pinTargetRef.current?.style.setProperty("--navbar-offset", `${navbarOffset}px`);
         const distanceRatio = isDesktop ? 1 : isTablet ? 0.9 : 0.8;
         const distancePerPanel = window.innerHeight * distanceRatio;
+        // Desktop keeps its original scrub value exactly; lighter on
+        // tablet/mobile — same panel-swap effect, less recompute per frame.
+        const scrubAmount = isDesktop ? 1 : isTablet ? 0.7 : 0.5;
 
         panels.forEach((panel, index) => {
           gsap.set(panel, { yPercent: index === 0 ? 0 : 100, opacity: 1, zIndex: index + 1 });
@@ -198,7 +201,7 @@ export default function Statistics() {
           {
             start: () => `top top+=${navbarOffset}`,
             end: () => `+=${distancePerPanel * (panels.length - 1)}`,
-            scrub: 1,
+            scrub: scrubAmount,
             onUpdate: (self) => {
               const idx = Math.min(panels.length - 1, Math.floor(self.progress * panels.length));
               setActive(idx);

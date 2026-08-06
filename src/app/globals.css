@@ -312,6 +312,16 @@ section[id] {
   scroll-margin-top: 100px;
 }
 
+/* Tablet: same appearance, lighter backdrop-filter than desktop's 20px/40px —
+   this range previously fell through to the full desktop blur untouched. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .glass,
+  .glass-strong {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+}
+
 /* Mobile animation performance */
 @media (max-width: 767px) {
   * {

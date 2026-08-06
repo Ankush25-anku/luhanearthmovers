@@ -174,6 +174,9 @@ export default function Process() {
         if (!rows.length) return undefined;
 
         const slideDistance = isDesktop ? 48 : isTablet ? 43 : 38;
+        // Desktop keeps its original scrub value exactly; lighter on
+        // tablet/mobile — same line-draw effect, less recompute per frame.
+        const lineScrub = isDesktop ? 1 : isTablet ? 0.7 : 0.5;
 
         gsap.set(lineRef.current, { scaleY: 0 });
         gsap.to(lineRef.current, {
@@ -183,7 +186,7 @@ export default function Process() {
             trigger: sectionRef.current,
             start: "top 70%",
             end: "bottom 60%",
-            scrub: 1,
+            scrub: lineScrub,
           },
         });
 

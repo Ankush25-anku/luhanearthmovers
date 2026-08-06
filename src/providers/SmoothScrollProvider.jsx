@@ -29,8 +29,15 @@ if (typeof window !== "undefined") {
  */
 export default function SmoothScrollProvider({ children }) {
   useEffect(() => {
+    // Desktop keeps its exact original feel. Below 1024px only: a shorter
+    // duration (less lingering momentum after the finger lifts) and a
+    // higher touch lerp (content tracks the finger more closely, less
+    // perceived lag) — both explicitly mobile/tablet-only tuning, touch
+    // virtualization itself (`syncTouch`) stays on everywhere.
+    const isMobileOrTablet = window.innerWidth < 1024;
+
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: isMobileOrTablet ? 1.0 : 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // expo-out
       smoothWheel: true,
       wheelMultiplier: 1,
@@ -39,7 +46,7 @@ export default function SmoothScrollProvider({ children }) {
       // scroll falls back to the browser's native momentum scroll, which
       // is exactly the "native scrolling feeling on mobile" we don't want.
       syncTouch: true,
-      syncTouchLerp: 0.075,
+      syncTouchLerp: isMobileOrTablet ? 0.1 : 0.075,
     });
 
     window.lenis = lenis;

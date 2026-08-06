@@ -133,6 +133,10 @@ export default function Services() {
 
         const distanceRatio = isDesktop ? 1 : isTablet ? 0.9 : 0.8;
         const distancePerCard = window.innerHeight * distanceRatio;
+        // Desktop keeps its original scrub value exactly; a lighter scrub on
+        // tablet/mobile tracks the finger more closely — same cover effect,
+        // less scroll-linked recompute work per frame on weaker devices.
+        const scrubAmount = isDesktop ? 1 : isTablet ? 0.7 : 0.5;
 
         cards.forEach((card, index) => {
           gsap.set(card, { yPercent: index === 0 ? 0 : 100 });
@@ -149,7 +153,7 @@ export default function Services() {
           {
             start: () => `top top+=${navbarOffset}`,
             end: () => `+=${distancePerCard * (cards.length - 1)}`,
-            scrub: 1,
+            scrub: scrubAmount,
           }
         );
 

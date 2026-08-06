@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from "react";
 
-const PARTICLE_COUNT_DESKTOP = 70;
-const PARTICLE_COUNT_MOBILE = 36; // same atmospheric feel, half the per-frame work
+const PARTICLE_COUNT_DESKTOP = 70; // unchanged
+const PARTICLE_COUNT_TABLET = 50; // was falling through to the full desktop count
+const PARTICLE_COUNT_MOBILE = 28; // same atmospheric feel, a fraction of the per-frame work
 const MAX_DELTA = 0.05; // clamp dt (seconds) so a backgrounded tab can't jump particles
 const HAZE_SPRITE_SIZE = 128; // px, pre-blurred once and scaled per particle at draw time
 
@@ -12,7 +13,9 @@ function getMaxDpr() {
 }
 
 function getParticleCount() {
-  return window.innerWidth < 768 ? PARTICLE_COUNT_MOBILE : PARTICLE_COUNT_DESKTOP;
+  if (window.innerWidth < 768) return PARTICLE_COUNT_MOBILE;
+  if (window.innerWidth < 1024) return PARTICLE_COUNT_TABLET;
+  return PARTICLE_COUNT_DESKTOP;
 }
 
 // Three subtle atmosphere types — sizes/speeds/colors tuned so none of them
