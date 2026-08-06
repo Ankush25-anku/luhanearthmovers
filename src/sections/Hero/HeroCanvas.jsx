@@ -332,7 +332,7 @@ export default function HeroCanvas() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute inset-0 h-full w-full"
     />
   );
 }

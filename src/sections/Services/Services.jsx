@@ -178,7 +178,7 @@ export default function Services() {
       <div
         ref={pinTargetRef}
         style={{ "--navbar-offset": `${DEFAULT_NAVBAR_HEIGHT}px` }}
-        className="relative mt-16 h-[calc(100vh-var(--navbar-offset))] overflow-hidden"
+        className="relative mt-16 h-[calc(100dvh-var(--navbar-offset))] overflow-hidden"
       >
         {SERVICE_CATEGORIES.map((category, index) => (
           <div

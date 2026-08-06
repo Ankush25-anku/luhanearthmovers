@@ -60,8 +60,9 @@ export default function SmoothScrollProvider({ children }) {
 
     window.lenis = lenis;
 
-    // Keep ScrollTrigger's scroll position in sync with Lenis's own,
-    // virtualized scroll updates.
+    // Keep ScrollTrigger's scroll position in sync with Lenis's own scroll
+    // updates — real wherever Lenis is animating (wheel), and passively
+    // observed wherever it isn't (native touch, see `syncTouch` above).
     lenis.on("scroll", ScrollTrigger.update);
 
     // Drive Lenis from GSAP's ticker rather than its own requestAnimationFrame
@@ -76,14 +77,37 @@ export default function SmoothScrollProvider({ children }) {
     // (e.g. a tab coming back into focus) — Lenis already handles that.
     gsap.ticker.lagSmoothing(0);
 
+    const refreshScrollTrigger = () => ScrollTrigger.refresh();
+
+    // Right after Lenis exists, so every pinned section's start/end is
+    // measured against the DOM Lenis will actually be scrolling.
+    refreshScrollTrigger();
+
     // Once fonts (and, after initial load, images) have settled, layout
     // may have shifted since ScrollTrigger last measured — refresh once so
     // every section's trigger positions stay accurate.
-    const refreshScrollTrigger = () => ScrollTrigger.refresh();
     document.fonts?.ready?.then(refreshScrollTrigger);
     window.addEventListener("load", refreshScrollTrigger);
 
+    // Mobile browsers resize the *visual* viewport (not `window`) when the
+    // address bar collapses/expands during a scroll gesture — a pinned
+    // section's start/end, measured in pixels against the viewport height
+    // at mount, silently goes stale the first time that happens, and every
+    // pin on the page pins/unpins a few dozen pixels off from where the
+    // user's finger actually is. That's the "hangs / jumps / feels
+    // reversed, only on a real phone" signature: `visualViewport` doesn't
+    // exist in Chrome DevTools' device simulation the same way, and desktop
+    // has no collapsing chrome at all, so neither ever surfaces this.
+    let viewportRefreshFrame = null;
+    const handleViewportResize = () => {
+      if (viewportRefreshFrame) cancelAnimationFrame(viewportRefreshFrame);
+      viewportRefreshFrame = requestAnimationFrame(refreshScrollTrigger);
+    };
+    window.visualViewport?.addEventListener("resize", handleViewportResize);
+
     return () => {
+      if (viewportRefreshFrame) cancelAnimationFrame(viewportRefreshFrame);
+      window.visualViewport?.removeEventListener("resize", handleViewportResize);
       window.removeEventListener("load", refreshScrollTrigger);
       gsap.ticker.remove(syncWithGsapTicker);
       lenis.destroy();

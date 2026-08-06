@@ -248,7 +248,7 @@ export default function Statistics() {
       <div
         ref={pinTargetRef}
         style={{ "--navbar-offset": `${DEFAULT_NAVBAR_HEIGHT}px` }}
-        className="relative h-[calc(100vh-var(--navbar-offset))] overflow-hidden"
+        className="relative h-[calc(100dvh-var(--navbar-offset))] overflow-hidden"
       >
         {PANEL_STATS.map((stat, index) => (
           <StatPanel
