@@ -153,19 +153,28 @@ export default function Process() {
       fadeUp(headingRef.current, { y: 24, duration: 0.9, start: "top 85%" });
     }, sectionRef);
 
-    // Desktop/tablet-only choreography: the connecting line draws with
-    // scroll, each card slides in from its side, and whichever milestone is
-    // centered in the viewport becomes the single "active" one — its node
-    // glows, its particles surface, and it scales up slightly while every
-    // other card dims. Mobile keeps the plain single-column reveal.
+    // Same choreography at every breakpoint: the connecting line draws with
+    // scroll, each card slides in from its side, particles drift near it,
+    // and whichever milestone is centered in the viewport becomes the
+    // single "active" one — its node glows, its particles surface, and it
+    // scales up slightly while every other card dims. Only the slide
+    // distance scales down per tier (100% desktop / 90% tablet / 80%
+    // mobile) — the mechanism itself is identical everywhere.
     const mm = gsap.matchMedia();
 
-    mm.add({ isDesktopOrTablet: "(min-width: 768px)" }, (context) => {
-      const { isDesktopOrTablet } = context.conditions;
-      const rows = rowRefs.current.filter(Boolean);
-      if (!rows.length) return undefined;
+    mm.add(
+      {
+        isDesktop: "(min-width: 1024px)",
+        isTablet: "(min-width: 768px) and (max-width: 1023px)",
+        isMobile: "(max-width: 767px)",
+      },
+      (context) => {
+        const { isDesktop, isTablet } = context.conditions;
+        const rows = rowRefs.current.filter(Boolean);
+        if (!rows.length) return undefined;
 
-      if (isDesktopOrTablet) {
+        const slideDistance = isDesktop ? 48 : isTablet ? 43 : 38;
+
         gsap.set(lineRef.current, { scaleY: 0 });
         gsap.to(lineRef.current, {
           scaleY: 1,
@@ -177,20 +186,16 @@ export default function Process() {
             scrub: 1,
           },
         });
-      } else {
-        gsap.set(lineRef.current, { scaleY: 1 });
-      }
 
-      rows.forEach((row, index) => {
-        const card = row.querySelector("[data-card]");
-        if (!card) return;
+        rows.forEach((row, index) => {
+          const card = row.querySelector("[data-card]");
+          if (!card) return;
 
-        if (isDesktopOrTablet) {
           const isLeft = index % 2 === 0;
 
           gsap.fromTo(
             card,
-            { opacity: 0, x: isLeft ? -48 : 48 },
+            { opacity: 0, x: isLeft ? -slideDistance : slideDistance },
             {
               opacity: 1,
               x: 0,
@@ -222,29 +227,13 @@ export default function Process() {
               if (self.isActive) setActiveRow(rows, index);
             },
           });
-        } else {
-          gsap.fromTo(
-            card,
-            { opacity: 0, y: 24 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.6,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: row,
-                start: "top 88%",
-                toggleActions: "play none none reverse",
-              },
-            }
-          );
-        }
-      });
+        });
 
-      return () => {
-        rows.forEach((row) => setRowActive(row, false));
-      };
-    });
+        return () => {
+          rows.forEach((row) => setRowActive(row, false));
+        };
+      }
+    );
 
     return () => {
       ctx.revert();

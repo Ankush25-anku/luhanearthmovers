@@ -9,6 +9,12 @@ if (typeof window !== "undefined") {
 }
 
 const TOTAL_FRAMES = 180;
+const FRAME_BATCH_SIZE = 15; // frames 2–180 load in 12 small batches, not one 179-wide burst
+
+/** Backing-store DPR cap — tighter on small phones, where fill-rate is scarcest. */
+function getMaxDpr() {
+  return window.innerWidth < 768 ? 1.5 : 2;
+}
 
 /**
  * Cinematic chapters — each maps a slice of linear scroll progress onto a
@@ -62,28 +68,44 @@ function getFramePath(frameNumber) {
   return `/assets/hero/frames/frame_${String(frameNumber).padStart(4, "0")}.png`;
 }
 
+/** Runs `callback` during idle time where supported, else a short timeout. */
+function scheduleIdleWork(callback) {
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(callback, { timeout: 500 });
+  } else {
+    setTimeout(callback, 32);
+  }
+}
+
 /**
- * `object-fit: cover` layout for `image` against the current viewport.
- * All 180 frames share the same source dimensions, so this only needs to
- * be recomputed on resize, never per-frame.
+ * Image layout for `image` against the current viewport. All 180 frames
+ * share the same source dimensions, so this only needs to be recomputed
+ * on resize, never per-frame. DPR is capped (tighter on mobile) —
+ * backing-store pixels beyond that are wasted cost, worst on exactly the
+ * devices least able to afford it.
+ *
+ * Desktop/tablet (≥768px): `object-fit: cover` — scale by
+ * `Math.max(widthRatio, heightRatio)` so the viewport is fully filled,
+ * center-cropping whichever axis overflows. Unchanged from before.
+ *
+ * Mobile (<768px): `object-fit: contain`-style cinematic scaling — scale
+ * by `Math.min(widthRatio, heightRatio)` instead, so the full composition
+ * (the whole excavator scene) always fits inside the viewport with
+ * nothing cropped, letterboxing the other axis instead of cutting into
+ * the subject. Same centering math either way.
  */
 function computeCoverLayout(image) {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = Math.min(window.devicePixelRatio || 1, getMaxDpr());
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
+  const isMobile = viewportWidth < 768;
 
-  const imageRatio = image.naturalWidth / image.naturalHeight;
-  const viewportRatio = viewportWidth / viewportHeight;
+  const widthRatio = viewportWidth / image.naturalWidth;
+  const heightRatio = viewportHeight / image.naturalHeight;
+  const scale = isMobile ? Math.min(widthRatio, heightRatio) : Math.max(widthRatio, heightRatio);
 
-  let drawWidth;
-  let drawHeight;
-  if (imageRatio > viewportRatio) {
-    drawHeight = viewportHeight;
-    drawWidth = drawHeight * imageRatio;
-  } else {
-    drawWidth = viewportWidth;
-    drawHeight = drawWidth / imageRatio;
-  }
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
 
   return {
     dpr,
@@ -106,13 +128,12 @@ export default function HeroCanvas() {
   const currentFrameRef = useRef(1); // last frame actually drawn
   const targetFrameRef = useRef(1); // latest frame requested by scroll
   const renderScheduledRef = useRef(false);
-  const scrollTweenRef = useRef(null);
 
   /**
    * Draws the given 1-indexed frame using the cached cover-fit layout, at
-   * full device pixel ratio for crisp Retina output. The backing store
-   * (and everything derived from it) is only touched when it actually
-   * changes — every other call is just one drawImage.
+   * full (capped) device pixel ratio for crisp Retina output. The backing
+   * store (and everything derived from it) is only touched when it
+   * actually changes — every other call is just one drawImage.
    */
   const renderFrame = useCallback((frameNumber) => {
     const canvas = canvasRef.current;
@@ -159,39 +180,55 @@ export default function HeroCanvas() {
   useEffect(() => {
     let cancelled = false;
     const images = new Array(TOTAL_FRAMES);
+    framesRef.current = images;
 
-    // Preload all 180 frames into a ref (never React state, so loading
-    // progress never triggers a re-render). Decode off the main thread
-    // where supported, so the first paint of each frame doesn't stall on
-    // synchronous decode work; frame 1 draws as soon as it's ready.
-    for (let i = 0; i < TOTAL_FRAMES; i += 1) {
-      const frameNumber = i + 1;
-      const image = new window.Image();
-      image.decoding = "async";
-      image.src = getFramePath(frameNumber);
+    // Priority load: frame 1 is fetched + decoded immediately since first
+    // paint depends on it. Frames 2–180 are NOT requested up front — they
+    // load in small batches, deferred to browser idle time, so the initial
+    // burst of 180 concurrent requests/decodes (the old behavior) can't
+    // stall the main thread or the network right when the page needs to
+    // become interactive.
+    const firstImage = new window.Image();
+    firstImage.decoding = "async";
+    firstImage.src = getFramePath(1);
+    images[0] = firstImage;
 
-      const handleReady = () => {
-        if (cancelled || frameNumber !== 1) return;
-        renderFrame(1);
-      };
+    const handleFirstFrameReady = () => {
+      if (!cancelled) renderFrame(1);
+    };
 
-      if (typeof image.decode === "function") {
-        image
-          .decode()
-          .then(handleReady)
-          .catch(() => {
-            // decode() can reject (e.g. slow/aborted networks); the image
-            // may still be usable, so fall back to the load event.
-            if (!cancelled) image.onload = handleReady;
-          });
-      } else {
-        image.onload = handleReady;
-      }
-
-      images[i] = image;
+    if (typeof firstImage.decode === "function") {
+      firstImage
+        .decode()
+        .then(handleFirstFrameReady)
+        .catch(() => {
+          if (!cancelled) firstImage.onload = handleFirstFrameReady;
+        });
+    } else {
+      firstImage.onload = handleFirstFrameReady;
     }
 
-    framesRef.current = images;
+    const loadRemainingFrames = (startIndex) => {
+      if (cancelled) return;
+      const endIndex = Math.min(startIndex + FRAME_BATCH_SIZE, TOTAL_FRAMES);
+
+      for (let i = startIndex; i < endIndex; i += 1) {
+        const frameNumber = i + 1;
+        const image = new window.Image();
+        image.decoding = "async";
+        image.src = getFramePath(frameNumber);
+        if (typeof image.decode === "function") {
+          image.decode().catch(() => {}); // pre-decode; failures are harmless here
+        }
+        images[i] = image;
+      }
+
+      if (endIndex < TOTAL_FRAMES) {
+        scheduleIdleWork(() => loadRemainingFrames(endIndex));
+      }
+    };
+
+    scheduleIdleWork(() => loadRemainingFrames(1)); // index 1 === frame 2
 
     const handleResize = () => {
       if (resizeFrameRef.current) cancelAnimationFrame(resizeFrameRef.current);
@@ -214,34 +251,64 @@ export default function HeroCanvas() {
     // paced frame number; the timeline itself is untouched.
     const pinTarget = canvasRef.current?.closest("section") ?? canvasRef.current?.parentElement;
 
-    // Sync GSAP/ScrollTrigger with Lenis if the app is running it —
-    // Lenis virtualizes scroll, so ScrollTrigger needs an explicit nudge
-    // to recalculate on Lenis's own scroll event rather than the native
-    // one. This is a no-op if no Lenis instance is present.
+    // Sync with Lenis if SmoothScrollProvider has set it up — Lenis
+    // virtualizes scroll, so ScrollTrigger needs an explicit nudge to
+    // recalculate on Lenis's own scroll event rather than the native one.
+    // No-op if no Lenis instance is present.
     const lenis = typeof window !== "undefined" ? window.lenis : null;
     lenis?.on?.("scroll", ScrollTrigger.update);
 
-    if (pinTarget) {
-      const progressProxy = { value: 0 };
+    // Same cinematic chapters/easing everywhere — only the total pin
+    // distance (how much scroll the whole sequence asks for) scales down
+    // on smaller viewports, so mobile isn't committed to as long a scrub.
+    const mm = gsap.matchMedia();
 
-      scrollTweenRef.current = gsap.to(progressProxy, {
-        value: 1,
-        ease: "none",
-        scrollTrigger: {
-          trigger: pinTarget,
-          start: "top top",
-          end: "+=350%",
-          pin: true,
-          scrub: 0.35,
-          anticipatePin: 1,
+    if (pinTarget) {
+      mm.add(
+        {
+          isDesktop: "(min-width: 1024px)",
+          isTablet: "(min-width: 768px) and (max-width: 1023px)",
+          isMobile: "(max-width: 767px)",
         },
-        onUpdate: () => {
-          const nextFrame = Math.round(mapProgressToFrame(progressProxy.value));
-          if (nextFrame === targetFrameRef.current) return;
-          targetFrameRef.current = nextFrame;
-          scheduleRender();
-        },
-      });
+        (context) => {
+          const { isDesktop, isTablet } = context.conditions;
+          // Same pin distance everywhere, just scaled — 100% desktop /
+          // 90% tablet / 80% mobile — so mobile still gets the full
+          // three-chapter cinematic scrub, not a shortened placeholder.
+          const pinDistance = isDesktop ? "350%" : isTablet ? "315%" : "280%";
+          // Lenis already smooths touch/wheel input; stacking GSAP's own
+          // scrub lag on top of that on a touch device reads as sluggish,
+          // so mobile/tablet scrub closer to 1:1 while desktop keeps the
+          // original, slightly-smoothed feel exactly as it was.
+          const scrubAmount = isDesktop ? 0.35 : isTablet ? 0.25 : 0.15;
+
+          const progressProxy = { value: 0 };
+
+          const tween = gsap.to(progressProxy, {
+            value: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: pinTarget,
+              start: "top top",
+              end: `+=${pinDistance}`,
+              pin: true,
+              scrub: scrubAmount,
+              anticipatePin: 1,
+            },
+            onUpdate: () => {
+              const nextFrame = Math.round(mapProgressToFrame(progressProxy.value));
+              if (nextFrame === targetFrameRef.current) return;
+              targetFrameRef.current = nextFrame;
+              scheduleRender();
+            },
+          });
+
+          return () => {
+            tween.scrollTrigger?.kill();
+            tween.kill();
+          };
+        }
+      );
     }
 
     return () => {
@@ -249,8 +316,7 @@ export default function HeroCanvas() {
       window.removeEventListener("resize", handleResize);
       if (resizeFrameRef.current) cancelAnimationFrame(resizeFrameRef.current);
       lenis?.off?.("scroll", ScrollTrigger.update);
-      scrollTweenRef.current?.scrollTrigger?.kill();
-      scrollTweenRef.current?.kill();
+      mm.revert();
     };
   }, [renderFrame, scheduleRender]);
 
@@ -258,7 +324,7 @@ export default function HeroCanvas() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="fixed inset-0 h-screen w-screen"
+      className="absolute inset-0 h-full w-full"
     />
   );
 }

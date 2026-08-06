@@ -2,15 +2,25 @@
 
 import { useEffect, useRef } from "react";
 
-const PARTICLE_COUNT = 70;
+const PARTICLE_COUNT_DESKTOP = 70;
+const PARTICLE_COUNT_MOBILE = 36; // same atmospheric feel, half the per-frame work
 const MAX_DELTA = 0.05; // clamp dt (seconds) so a backgrounded tab can't jump particles
+const HAZE_SPRITE_SIZE = 128; // px, pre-blurred once and scaled per particle at draw time
+
+function getMaxDpr() {
+  return window.innerWidth < 768 ? 1.5 : 2;
+}
+
+function getParticleCount() {
+  return window.innerWidth < 768 ? PARTICLE_COUNT_MOBILE : PARTICLE_COUNT_DESKTOP;
+}
 
 // Three subtle atmosphere types — sizes/speeds/colors tuned so none of them
 // read as sparks or fire, just quiet drifting dust/soil/haze.
 const PARTICLE_TYPES = [
-  { type: "dust", weight: 0.5, size: [1, 2.2], speed: [8, 18], opacity: [0.15, 0.35], color: "250,250,250", blur: 0 },
-  { type: "soil", weight: 0.3, size: [1.5, 3.2], speed: [6, 14], opacity: [0.18, 0.4], color: "184,142,99", blur: 0 },
-  { type: "haze", weight: 0.2, size: [22, 46], speed: [3, 8], opacity: [0.02, 0.06], color: "250,250,250", blur: 6 },
+  { type: "dust", weight: 0.5, size: [1, 2.2], speed: [8, 18], opacity: [0.15, 0.35], color: "250,250,250" },
+  { type: "soil", weight: 0.3, size: [1.5, 3.2], speed: [6, 14], opacity: [0.18, 0.4], color: "184,142,99" },
+  { type: "haze", weight: 0.2, size: [22, 46], speed: [3, 8], opacity: [0.02, 0.06], color: "250,250,250" },
 ];
 
 function randomBetween(min, max) {
@@ -53,9 +63,32 @@ function getLifeFactor(life, lifetime) {
   return Math.max(0, Math.min(fadeIn, fadeOut));
 }
 
+/**
+ * Pre-renders one soft, blurred white circle to an offscreen canvas. Haze
+ * particles just `drawImage` this (scaled to their own size) instead of
+ * running `ctx.filter = blur(...)` on every particle, every frame — same
+ * soft look, a fraction of the cost.
+ */
+function createHazeSprite() {
+  const sprite = document.createElement("canvas");
+  sprite.width = HAZE_SPRITE_SIZE;
+  sprite.height = HAZE_SPRITE_SIZE;
+
+  const spriteCtx = sprite.getContext("2d");
+  const center = HAZE_SPRITE_SIZE / 2;
+  spriteCtx.filter = "blur(12px)";
+  spriteCtx.fillStyle = "rgb(250,250,250)";
+  spriteCtx.beginPath();
+  spriteCtx.arc(center, center, center - 18, 0, Math.PI * 2);
+  spriteCtx.fill();
+
+  return sprite;
+}
+
 export default function HeroParticles() {
   const canvasRef = useRef(null);
   const particlesRef = useRef([]);
+  const hazeSpriteRef = useRef(null);
   const rafRef = useRef(null);
   const lastTimeRef = useRef(0);
   const sizeRef = useRef({ width: 0, height: 0 });
@@ -66,8 +99,12 @@ export default function HeroParticles() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return undefined;
 
+    if (!hazeSpriteRef.current) {
+      hazeSpriteRef.current = createHazeSprite();
+    }
+
     const resizeCanvas = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, getMaxDpr());
       const width = window.innerWidth;
       const height = window.innerHeight;
       sizeRef.current = { width, height };
@@ -83,7 +120,7 @@ export default function HeroParticles() {
     // in place via resetParticle — no per-frame allocation.
     if (!particlesRef.current.length) {
       const { width, height } = sizeRef.current;
-      particlesRef.current = Array.from({ length: PARTICLE_COUNT }, () => {
+      particlesRef.current = Array.from({ length: getParticleCount() }, () => {
         const particle = resetParticle({}, width, height);
         // Scatter initial life across the full range so particles don't
         // all fade in/out in sync on first paint.
@@ -99,6 +136,8 @@ export default function HeroParticles() {
 
       const { width, height } = sizeRef.current;
       ctx.clearRect(0, 0, width, height);
+
+      const hazeSprite = hazeSpriteRef.current;
 
       particlesRef.current.forEach((particle) => {
         particle.life += dt;
@@ -117,15 +156,20 @@ export default function HeroParticles() {
         if (opacity <= 0) return;
 
         ctx.globalAlpha = opacity;
-        ctx.filter = particle.config.blur ? `blur(${particle.config.blur}px)` : "none";
-        ctx.fillStyle = `rgb(${particle.config.color})`;
-        ctx.beginPath();
-        ctx.arc(renderX, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fill();
+
+        if (particle.config.type === "haze" && hazeSprite) {
+          // Cheap scaled blit — no per-particle filter cost.
+          const diameter = particle.size * 2;
+          ctx.drawImage(hazeSprite, renderX - particle.size, particle.y - particle.size, diameter, diameter);
+        } else {
+          ctx.fillStyle = `rgb(${particle.config.color})`;
+          ctx.beginPath();
+          ctx.arc(renderX, particle.y, particle.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
 
       ctx.globalAlpha = 1;
-      ctx.filter = "none";
 
       rafRef.current = requestAnimationFrame(tick);
     };

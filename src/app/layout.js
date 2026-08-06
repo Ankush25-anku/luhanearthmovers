@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/navigation/Navbar";
 import Footer from "@/sections/Footer/Footer";
 import FloatingWhatsApp from "@/components/common/FloatingWhatsApp";
+import SmoothScrollProvider from "@/providers/SmoothScrollProvider";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,11 +25,13 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <Navbar />
-        {children}
-        <FloatingWhatsApp />
-        <Footer />
+      <body className="min-h-full flex flex-col overflow-x-hidden">
+        <SmoothScrollProvider>
+          <Navbar />
+          {children}
+          <FloatingWhatsApp />
+          <Footer />
+        </SmoothScrollProvider>
       </body>
     </html>
   );

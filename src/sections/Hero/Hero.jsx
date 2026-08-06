@@ -5,25 +5,21 @@ import HeroParticles from "./HeroParticles";
 
 /**
  * Hero
- * Pure composition — no animation lives here. The section itself is a
- * single viewport tall; HeroCanvas pins it via ScrollTrigger and its own
- * `end: "+=350%"` supplies ALL of the extra scroll distance for the frame
- * scrub (ScrollTrigger's pin-spacer reserves that space automatically —
- * giving the section its own large explicit height on top of that, e.g.
- * h-[500vh], double-reserves scroll room and leaves a dead blank gap
- * after the pin releases and before About appears). Every layer below is
- * fixed to the viewport so it stays put alongside the canvas for the
- * whole pin, rather than scrolling away inside the section.
+ * Pure composition — no animation lives here. The section is exactly one
+ * viewport tall; HeroCanvas pins it via ScrollTrigger and scrubs its frame
+ * sequence across that pin. ScrollTrigger's own pin is the ONLY thing that
+ * makes this viewport-locked — every layer below is `absolute inset-0`
+ * (sized to this `relative h-screen` section), not independently `fixed`,
+ * so once the pin releases they scroll away naturally with the section
+ * instead of staying glued to the viewport over every section after it.
  */
 export default function Hero() {
   return (
-    <section className="relative h-screen">
-      <div className="fixed inset-0 h-screen w-screen overflow-hidden">
-        <HeroCanvas />
-        <HeroOverlay />
-        <HeroParticles />
-        {/* <HeroContent /> */}
-      </div>
+    <section id="home" className="relative h-screen overflow-hidden">
+      <HeroCanvas />
+      <HeroOverlay />
+      <HeroParticles />
+      {/* <HeroContent /> */}
     </section>
   );
 }

@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 
-import Container from "@/components/common/Container";
 import GlassCard from "@/components/common/GlassCard";
 import GridBackground from "@/components/common/GridBackground";
 import NoiseOverlay from "@/components/common/NoiseOverlay";
@@ -94,7 +93,7 @@ function StatPanel({ stat, index, panelRef }) {
     <div
       ref={panelRef}
       style={{ zIndex: index + 1 }}
-      className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden py-20 text-center md:absolute md:inset-0 md:h-full md:py-0"
+      className="absolute inset-0 flex h-full flex-col items-center justify-center overflow-hidden text-center"
     >
       <div
         data-atmosphere
@@ -112,14 +111,14 @@ function StatPanel({ stat, index, panelRef }) {
       <div
         data-circle
         aria-hidden="true"
-        className="pointer-events-none absolute h-[22rem] w-[22rem] rounded-full border border-primary/25 md:h-[30rem] md:w-[30rem]"
+        className="pointer-events-none absolute h-[16rem] w-[16rem] rounded-full border border-primary/25 md:h-[22rem] md:w-[22rem] lg:h-[30rem] lg:w-[30rem]"
       />
 
-      <div className="relative z-20">
+      <div className="relative z-20 px-6">
         <span
           data-number
           className="block font-number leading-none text-text"
-          style={{ fontSize: "clamp(4.5rem, 12vw, 13rem)" }}
+          style={{ fontSize: "clamp(3.5rem, 14vw, 13rem)" }}
         >
           {(stat.prefix ?? "") + stat.value.toLocaleString() + (stat.suffix ?? "")}
         </span>
@@ -132,7 +131,7 @@ function StatPanel({ stat, index, panelRef }) {
       <GlassCard
         radius="full"
         padding="sm"
-        className="absolute bottom-10 left-1/2 z-20 hidden -translate-x-1/2 px-6 py-2 md:block"
+        className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2 px-6 py-2 md:bottom-10"
       >
         <span className="text-caption text-text-muted">
           {String(index + 1).padStart(2, "0")} / {String(PANEL_STATS.length).padStart(2, "0")}
@@ -146,12 +145,12 @@ export default function Statistics() {
   const pinTargetRef = useRef(null);
   const panelRefs = useRef([]);
 
-  // Desktop + tablet: pin the deck and scrub the transform timeline —
-  // each incoming panel slides up from below while the previous one fades
-  // away completely. Separately, whichever panel is current gets its own
-  // real-time choreography (counter, rotating ring, pulsing glow, grid
-  // brightening) started/stopped as it becomes active/inactive. Mobile
-  // matches neither condition, so panels simply stack normally, unanimated.
+  // Same pinned, cinematic single-panel choreography at every breakpoint —
+  // each incoming panel slides up while the previous fades away completely,
+  // and whichever panel is current gets its own real-time choreography
+  // (counter, rotating ring, pulsing glow, grid brightening) started/
+  // stopped as it becomes active/inactive. Only the pin distance scales
+  // down per tier (100% desktop / 90% tablet / 80% mobile).
   useEffect(() => {
     const mm = gsap.matchMedia();
 
@@ -159,15 +158,17 @@ export default function Statistics() {
       {
         isDesktop: "(min-width: 1024px)",
         isTablet: "(min-width: 768px) and (max-width: 1023px)",
+        isMobile: "(max-width: 767px)",
       },
       (context) => {
-        const { isDesktop } = context.conditions;
+        const { isDesktop, isTablet } = context.conditions;
         const panels = panelRefs.current.filter(Boolean);
         if (!panels.length) return undefined;
 
         const navbarOffset = measureNavbarHeight();
         pinTargetRef.current?.style.setProperty("--navbar-offset", `${navbarOffset}px`);
-        const distancePerPanel = window.innerHeight * (isDesktop ? 1 : 0.6);
+        const distanceRatio = isDesktop ? 1 : isTablet ? 0.9 : 0.8;
+        const distancePerPanel = window.innerHeight * distanceRatio;
 
         panels.forEach((panel, index) => {
           gsap.set(panel, { yPercent: index === 0 ? 0 : 100, opacity: 1, zIndex: index + 1 });
@@ -218,37 +219,11 @@ export default function Statistics() {
   }, []);
 
   return (
-    <section
-      id="statistics"
-      aria-label="Our Impact in Numbers"
-      className="relative bg-background"
-    >
-      {/* Mobile — pinning disabled, statistics render as a plain vertical list. */}
-      <div className="relative py-20 md:hidden">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-30">
-          <GridBackground />
-          <NoiseOverlay />
-        </div>
-        <Container maxWidth="content" className="relative flex flex-col gap-16 text-center">
-          {PANEL_STATS.map((stat) => (
-            <div key={stat.id}>
-              <span
-                className="block font-number leading-none text-text"
-                style={{ fontSize: "clamp(3.5rem, 20vw, 6rem)" }}
-              >
-                {(stat.prefix ?? "") + stat.value.toLocaleString() + (stat.suffix ?? "")}
-              </span>
-              <p className="text-h3 mt-4 text-primary">{stat.label}</p>
-            </div>
-          ))}
-        </Container>
-      </div>
-
-      {/* Desktop + tablet — pinned, cinematic single-panel presentation. */}
+    <section id="statistics" aria-label="Our Impact in Numbers" className="relative bg-background">
       <div
         ref={pinTargetRef}
         style={{ "--navbar-offset": `${DEFAULT_NAVBAR_HEIGHT}px` }}
-        className="relative hidden md:block md:h-[calc(100vh-var(--navbar-offset))] md:overflow-hidden"
+        className="relative h-[calc(100vh-var(--navbar-offset))] overflow-hidden"
       >
         {PANEL_STATS.map((stat, index) => (
           <StatPanel

@@ -140,7 +140,11 @@ export default function Testimonials() {
   }, []);
 
   return (
-    <section id="testimonials" aria-label="Client Testimonials" className="section relative bg-background">
+    <section
+      id="testimonials"
+      aria-label="Client Testimonials"
+      className="section relative overflow-hidden bg-background"
+    >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <GridBackground className="opacity-60" />
         <NoiseOverlay />

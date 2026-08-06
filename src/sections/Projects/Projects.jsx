@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
-import { fadeUp } from "@/animations/gsap/reveal";
 
 import Container from "@/components/common/Container";
 import SectionHeading from "@/components/common/SectionHeading";
@@ -34,7 +33,7 @@ function ProjectCard({ project }) {
     .filter(Boolean);
 
   return (
-  <article className="project-card w-full shrink-0 px-2 md:w-[65vw] md:px-3 lg:w-[85vw] lg:px-4">
+  <article className="project-card w-[85vw] shrink-0 px-2 md:w-[65vw] md:px-3 lg:w-[85vw] lg:px-4">
       <GlassCard
         radius="2xl"
         padding="lg"
@@ -101,46 +100,37 @@ function ProjectCard({ project }) {
 export default function Projects() {
   const pinTargetRef = useRef(null);
 
-  // Desktop + tablet: pin the section and translate the track horizontally
-  // as the user scrolls vertically. Card width shrinks at md: (tablet)
-  // versus lg: (desktop), which naturally shortens the horizontal scroll
-  // distance on tablet — no separate distance logic needed. Mobile matches
-  // neither condition, so the track keeps its default vertical flex-col
-  // layout with no pin and no transform ever applied.
+  // Same pin + horizontal-scroll mechanism at every breakpoint — the track
+  // translates horizontally as the user scrolls vertically. Card width
+  // (85vw desktop / 65vw tablet / 85vw mobile) already scales the natural
+  // scroll distance per tier since it's viewport-relative; on top of that,
+  // an explicit scrub tuning keeps tablet/mobile feeling responsive rather
+  // than laggy. The pin itself is never disabled at any width.
   useEffect(() => {
     const mm = gsap.matchMedia();
 
-   mm.add("(min-width:768px)", () => {
-      const navbarOffset = measureNavbarHeight();
+    mm.add(
+      {
+        isDesktop: "(min-width: 1024px)",
+        isTablet: "(min-width: 768px) and (max-width: 1023px)",
+        isMobile: "(max-width: 767px)",
+      },
+      (context) => {
+        const { isDesktop, isTablet } = context.conditions;
+        const navbarOffset = measureNavbarHeight();
+        const scrubAmount = isDesktop ? 1 : isTablet ? 0.8 : 0.6;
 
-      const tween = horizontalScroll(pinTargetRef.current, {
-        start: () => `top top+=${navbarOffset}`,
-        scrub: 1,
-      });
+        const tween = horizontalScroll(pinTargetRef.current, {
+          start: () => `top top+=${navbarOffset}`,
+          scrub: scrubAmount,
+        });
 
-      return () => tween?.scrollTrigger?.kill();
-    });
+        return () => tween?.scrollTrigger?.kill();
+      }
+    );
 
     return () => mm.revert();
   }, []);
-
-
-  useEffect(() => {
-  const mm = gsap.matchMedia();
-
-  mm.add("(max-width:767px)", () => {
-    const cards = gsap.utils.toArray(".project-card");
-
-    fadeUp(cards, {
-      y: 60,
-      duration: 1,
-      stagger: 0.2,
-      start: "top 85%",
-    });
-  });
-
-  return () => mm.revert();
-}, []);
   return (
     <section
       id="projects"
@@ -156,8 +146,8 @@ export default function Projects() {
         />
       </Container>
 
-      <div ref={pinTargetRef} className="relative mt-16 md:overflow-hidden">
-    <div className="flex flex-col gap-10 md:flex-row md:gap-6 lg:gap-10">
+      <div ref={pinTargetRef} className="relative mt-16 overflow-hidden">
+        <div className="flex flex-row gap-4 md:gap-6 lg:gap-10">
           {FEATURED_PROJECTS.map((project) => (
             <ProjectCard key={project.slug} project={project} />
           ))}

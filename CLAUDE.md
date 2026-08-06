@@ -1,10 +1,21 @@
-# VNS Prime Infra - AI Development Guide
+# Luhan Earth Movers - AI Development Guide
 
-## Project Overview
+# Project Overview
 
-Build a world-class, award-winning corporate website for VNS Prime Infra Pvt Ltd using modern web technologies.
+Build a world-class, award-winning corporate website for:
 
-The website should feel premium, cinematic, industrial, and trustworthy while remaining fast and highly optimized.
+LUHAN EARTH MOVERS
+
+using modern web technologies.
+
+The website should feel:
+
+Premium
+Cinematic
+Industrial
+Powerful
+Trustworthy
+Engineering-focused
 
 This is NOT a template website.
 
@@ -18,25 +29,59 @@ The visual quality should be comparable to websites featured on:
 - Locomotive
 - Basement Studio
 
----
+# Brand Identity
 
-## Tech Stack
+Company:
 
-- Next.js 15 (App Router)
+Luhan Earth Movers
+
+Industry:
+
+- Earth Moving
+- Excavation
+- Heavy Machinery
+- Infrastructure Development
+- Construction Services
+- Mining Support
+- Land Development
+
+The website should immediately communicate:
+
+- Heavy equipment expertise
+- Large-scale project capability
+- Engineering precision
+- Reliability
+- Professional execution
+
+# Tech Stack
+
+Framework:
+
+- Next.js 15 App Router
 - JavaScript
+
+Styling:
+
 - Tailwind CSS
+
+Animation:
+
 - GSAP
-- ScrollTrigger
-- Lenis
+- GSAP ScrollTrigger
+- Lenis Smooth Scroll
 - Framer Motion
+
+3D / Advanced Visuals:
+
 - Three.js
 - React Three Fiber
 - Drei
+
+Icons:
+
 - Lucide React
 
----
-
-## Design Language
+# Design Language
 
 Style:
 
@@ -44,25 +89,33 @@ Modern Industrial Luxury
 
 Keywords:
 
-Minimal
-Premium
-Engineering
-Architecture
-Construction
-Heavy Equipment
-Concrete
+Heavy Machinery
+
+Earth
+
 Steel
-Glass
+
+Concrete
+
+Engineering
+
+Construction
+
+Architecture
+
 Depth
+
 Large Typography
+
 Negative Space
-Cinematic
 
----
+Cinematic Lighting
 
-## Color Palette
+Industrial Premium
 
-Primary:
+# Color Palette
+
+Primary Orange:
 
 #F97316
 
@@ -90,136 +143,212 @@ Accent:
 
 #FF8C42
 
----
+# Typography
 
-## Typography
-
-Headings
+Headings:
 
 Space Grotesk
 
-Body
+Body:
 
 Inter
 
-Numbers
+Numbers:
 
 Bebas Neue
 
----
+# Layout System
 
-## Spacing Rules
-
-Always use generous spacing.
-
-Desktop:
-
-120px–180px vertical spacing.
-
-Tablet:
-
-90px–120px.
-
-Mobile:
-
-64px–90px.
-
-Never crowd sections.
-
-Large whitespace is encouraged.
-
----
-
-## Layout Rules
-
-Maximum width:
+Maximum Website Width:
 
 1440px
 
-Content width:
+Content Width:
 
 1280px
 
-Consistent padding:
+Padding:
 
 Desktop:
+
 px-12
 
 Tablet:
+
 px-8
 
 Mobile:
+
 px-6
 
----
+# Spacing Rules
 
-## Animation Rules
+Always maintain premium whitespace.
 
-Animations should feel premium.
+Desktop:
 
-Never over-animate.
+120px - 180px
+
+Tablet:
+
+90px - 120px
+
+Mobile:
+
+64px - 90px
+
+Never create crowded layouts.
+
+# Animation Philosophy
+
+Animations should feel:
+
+Cinematic
+
+Premium
+
+Purposeful
+
+Never over animate.
+
+## GSAP Usage
 
 Use GSAP for:
 
-Page reveal
+- Hero animations
+- Scroll reveals
+- Text animations
+- Image reveals
+- Parallax
+- Pinned sections
+- Horizontal scrolling
+- Timeline based storytelling
+- Canvas animations
 
-Text reveal
-
-Image reveal
-
-Scroll animations
-
-Pinned sections
-
-Parallax
-
-Horizontal scrolling
+## Framer Motion Usage
 
 Use Framer Motion only for:
 
-Buttons
+- Buttons
+- Cards
+- Hover interactions
+- Small UI animations
 
-Cards
+Do not use Framer Motion for large scroll animations.
 
-Hover effects
+# Hero Section Rules
 
-Small UI interactions
+Hero is the most important section.
 
----
+The hero can use:
 
-## Smooth Scrolling
+- Video
+- Canvas frame sequences
+- GSAP ScrollTrigger
+- Cinematic transitions
+
+Requirements:
+
+- Smooth scrolling
+- No frame jumping
+- No scroll lag
+- GPU accelerated rendering
+- Optimized canvas rendering
+
+Frame sequence rules:
+
+- Never reload images during scroll
+- Use refs instead of React state
+- Prevent unnecessary canvas redraws
+- Use requestAnimationFrame efficiently
+- Handle mobile performance carefully
+
+Hero must feel similar to:
+
+Awwwards level interactive websites.
+
+# Smooth Scrolling
 
 Use Lenis globally.
 
-Never use CSS smooth scrolling.
+Lenis must synchronize with GSAP ticker.
 
----
+Required:
 
-## Performance
+Lenis scroll event:
 
-Optimize images.
+↓
 
-Lazy load heavy sections.
+ScrollTrigger.update()
 
-Avoid unnecessary re-renders.
+↓
 
-Keep animations GPU accelerated.
+GSAP ticker
 
----
+Never use:
 
-## Accessibility
+CSS scroll-behavior:smooth
 
-Keyboard navigation.
+# Responsive Rules
 
-Proper semantic HTML.
+Every section must work perfectly on:
 
-Visible focus states.
+Mobile:
 
-Good contrast.
+320px
+375px
+390px
+430px
 
----
+Tablet:
 
-## Component Rules
+768px
+820px
+1024px
+
+Desktop:
+
+1280px
+1440px
+1920px
+
+Desktop experience should translate into mobile/tablet.
+
+Do NOT remove animations only because of mobile.
+
+Instead:
+
+- optimize
+- simplify calculations
+- reduce heavy rendering
+- maintain visual quality
+
+# Performance Rules
+
+Prioritize:
+
+60 FPS animations
+
+Always:
+
+- Lazy load heavy sections
+- Optimize images
+- Avoid unnecessary React renders
+- Use GPU accelerated transforms
+- Cleanup GSAP ScrollTriggers
+- Cleanup animation listeners
+- Avoid memory leaks
+
+For canvas/video:
+
+Optimize:
+
+- frame loading
+- memory usage
+- rendering frequency
+- device pixel ratio
+
+# Component Rules
 
 Every component must be:
 
@@ -229,38 +358,72 @@ Responsive
 
 Accessible
 
-Cleanly structured
+Clean
 
 Well commented
 
----
+Structure:
 
-## Code Quality
+components/
 
-Use functional React components.
+sections/
 
-Avoid inline styles.
+animations/
 
-Prefer Tailwind utility classes.
+hooks/
+
+lib/
+
+data/
+
+# Code Quality
+
+Use:
+
+Functional React components
+
+Avoid:
+
+- duplicated logic
+- unnecessary state
+- inline styles
+
+Prefer:
+
+Tailwind utilities
 
 Keep files modular.
 
-Do not duplicate logic.
+# Accessibility
 
----
+Every component must include:
 
-## Design Philosophy
+- Semantic HTML
+- Keyboard navigation
+- Focus states
+- Proper aria labels
+- Good contrast
 
-Every section should look like it belongs to the same design system.
+# Development Rules
 
-Nothing should look like a template.
+Before modifying any section:
 
-The website should immediately communicate:
+1. Read existing component
+2. Understand current animation logic
+3. Do not break desktop experience
+4. Test responsive behavior
+5. Keep existing architecture
 
-Premium Engineering Company
+# Design Philosophy
 
-Reliable Infrastructure Partner
+Every section must feel like one premium experience.
 
-Large Scale Construction Expertise
+Nothing should look like:
 
-Luxury Corporate Identity
+- Bootstrap template
+- Generic corporate website
+- Stock landing page
+
+The final website should feel like:
+
+"India's premium heavy equipment and infrastructure company website."

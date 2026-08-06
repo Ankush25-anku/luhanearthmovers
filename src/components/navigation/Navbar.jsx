@@ -6,16 +6,18 @@ import { ArrowRight, Menu } from "lucide-react";
 import gsap from "gsap";
 import Image from "next/image";
 
+import MobileMenu from "./MobileMenu";
+
 // Scroll distance (px) after which the navbar morphs into its glass state.
 const SCROLL_THRESHOLD = 80;
 
 const NAV_LINKS = [
-  { label: "Home", href: "#home" },
-  { label: "About", href: "#about" },
-  { label: "Services", href: "#services" },
-  { label: "Projects", href: "#projects" },
-  { label: "Gallery", href: "#gallery" },
-  { label: "Contact", href: "#contact" },
+  { label: "Home", href: "/" },
+  { label: "About", href: "/about" },
+  { label: "Services", href: "/services" },
+  { label: "Projects", href: "/projects" },
+  { label: "Gallery", href: "/gallery" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export default function Navbar() {
@@ -113,14 +115,34 @@ export default function Navbar() {
             isScrolled ? "scale-90" : "scale-100",
           ].join(" ")}
         >
-          <div className="relative flex h-20 w-40 items-center justify-center overflow-hidden md:h-24 md:w-48">
+          {/*
+            Logo box: flex + items-center (no fixed height) so the logo is
+            always vertically centered by the parent nav's own flex
+            alignment, never fights the header's scrolled/unscrolled
+            height, and can never overflow it. flex-shrink-0 keeps it from
+            being squeezed if the link list ever gets tight.
+          */}
+          <div className="flex flex-shrink-0 items-center">
+            {/*
+              Real source is 1600×1200 (4:3) — width/height here just
+              establish that intrinsic ratio for Next/Image; the rendered
+              size is controlled entirely by the height/width-auto classes
+              below, per tier:
+                mobile  (<768px):  35–45px
+                tablet  (768–1023px): 45–55px
+                desktop (≥1024px): 55–65px
+              object-contain (never cover) preserves the ratio exactly —
+              no stretching, no cropping. max-w caps it so a much wider
+              logo file swapped in later couldn't blow out the layout.
+            */}
             <Image
               src="/assets/images/lohani-logo.png"
               alt="Lohani Earth Movers"
-              fill
+              width={1600}
+              height={1200}
               priority
-              sizes="(max-width: 768px) 160px, 190px"
-              className="object-contain"
+              sizes="(max-width: 767px) 60px, (max-width: 1023px) 73px, 87px"
+              className="h-[clamp(35px,28px+2.24vw,45px)] w-auto max-w-[180px] object-contain md:h-[clamp(45px,15px+3.9vw,55px)] lg:h-[clamp(55px,30px+2.4vw,65px)]"
             />
           </div>
         </Link>
@@ -146,7 +168,7 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           <Link
             ref={ctaRef}
-            href="#contact"
+            href="/contact"
             className="glow-orange-hover group hidden items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-7 py-3.5 font-body text-sm font-semibold text-background transition-transform duration-300 ease-premium hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
           >
             Get Free Consultation
@@ -155,8 +177,25 @@ export default function Navbar() {
               aria-hidden="true"
             />
           </Link>
+
+          {/* Hamburger — mobile/tablet only. Opens the fullscreen MobileMenu. */}
+          <button
+            type="button"
+            onClick={toggleMobileMenu}
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMobileMenuOpen}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-text transition-colors duration-300 ease-premium hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:hidden"
+          >
+            <Menu className="h-6 w-6" aria-hidden="true" />
+          </button>
         </div>
       </nav>
+
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        links={NAV_LINKS}
+      />
     </header>
   );
 }

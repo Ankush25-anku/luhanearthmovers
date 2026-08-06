@@ -35,71 +35,77 @@ function formatStatValue(value, stat) {
 export default function WhyChooseUs() {
   const blockRefs = useRef([]);
 
-  // Desktop/tablet only: each reason block gets its own reversible
-  // ScrollTrigger timeline — as it's scrolled into its "active" band the
-  // statistic counts up, the description fades in, and the accent line
-  // grows; scrolling past it plays the same timeline in reverse, so the
-  // previous reason fades away exactly as the next one takes over. Mobile
-  // matches neither condition, so every reason simply renders at rest.
+  // Same reversible ScrollTrigger timeline at every breakpoint — as a
+  // reason block scrolls into its "active" band, the statistic counts up,
+  // the description fades in, and the accent line grows; scrolling past it
+  // plays the same timeline in reverse, so the previous reason fades away
+  // exactly as the next one takes over. Only the reveal's travel distance
+  // scales down per tier (100% desktop / 90% tablet / 80% mobile) — the
+  // mechanism (counter, line-grow, reversible trigger) is identical
+  // everywhere.
   useEffect(() => {
     const mm = gsap.matchMedia();
 
-    mm.add("(min-width: 768px)", () => {
-      const blocks = blockRefs.current.filter(Boolean);
-      if (!blocks.length) return undefined;
+    mm.add(
+      {
+        isDesktop: "(min-width: 1024px)",
+        isTablet: "(min-width: 768px) and (max-width: 1023px)",
+        isMobile: "(max-width: 767px)",
+      },
+      (context) => {
+        const { isDesktop, isTablet } = context.conditions;
+        const blocks = blockRefs.current.filter(Boolean);
+        if (!blocks.length) return undefined;
 
-      const scrollTriggers = blocks.map((block, index) => {
-        const stat = STATS[index];
-        const statEl = block.querySelector("[data-stat]");
-        const revealEl = block.querySelector("[data-reveal]");
-        const lineEl = block.querySelector("[data-line]");
+        const revealDistance = isDesktop ? 16 : isTablet ? 14 : 12;
 
-        if (statEl) statEl.textContent = formatStatValue(0, stat);
+        const scrollTriggers = blocks.map((block, index) => {
+          const stat = STATS[index];
+          const statEl = block.querySelector("[data-stat]");
+          const revealEl = block.querySelector("[data-reveal]");
+          const lineEl = block.querySelector("[data-line]");
 
-        const counter = { value: 0 };
+          if (statEl) statEl.textContent = formatStatValue(0, stat);
 
-        const timeline = gsap.timeline({
-          scrollTrigger: {
-            trigger: block,
-            start: "top 65%",
-            end: "bottom 35%",
-            toggleActions: "play reverse play reverse",
-          },
+          const counter = { value: 0 };
+
+          const timeline = gsap.timeline({
+            scrollTrigger: {
+              trigger: block,
+              start: "top 65%",
+              end: "bottom 35%",
+              toggleActions: "play reverse play reverse",
+            },
+          });
+
+          timeline
+            .fromTo(lineEl, { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power2.out" }, 0)
+            .fromTo(
+              revealEl,
+              { opacity: 0, y: revealDistance },
+              { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+              0.05
+            )
+            .fromTo(
+              counter,
+              { value: 0 },
+              {
+                value: stat.value,
+                duration: 1,
+                ease: "power2.out",
+                onUpdate: () => {
+                  if (statEl) statEl.textContent = formatStatValue(counter.value, stat);
+                },
+              },
+              0
+            );
+
+          return timeline.scrollTrigger;
         });
 
-        timeline
-          .fromTo(
-            lineEl,
-            { scaleX: 0 },
-            { scaleX: 1, duration: 0.7, ease: "power2.out" },
-            0,
-          )
-          .fromTo(
-            revealEl,
-            { opacity: 0, y: 16 },
-            { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
-            0.05,
-          )
-          .fromTo(
-            counter,
-            { value: 0 },
-            {
-              value: stat.value,
-              duration: 1,
-              ease: "power2.out",
-              onUpdate: () => {
-                if (statEl)
-                  statEl.textContent = formatStatValue(counter.value, stat);
-              },
-            },
-            0,
-          );
-
-        return timeline.scrollTrigger;
-      });
-
-      return () => scrollTriggers.forEach((trigger) => trigger?.kill());
-    });
+        return () => scrollTriggers.forEach((trigger) => trigger?.kill());
+      }
+    );
 
     return () => mm.revert();
   }, []);
@@ -130,7 +136,7 @@ export default function WhyChooseUs() {
                 ref={(el) => {
                   blockRefs.current[index] = el;
                 }}
-                className="flex min-h-[50vh] flex-col justify-center py-6 lg:min-h-[55vh]"
+                className="flex min-h-[45vh] flex-col justify-center py-6 md:min-h-[50vh] lg:min-h-[55vh]"
               >
                 <GlassCard
                   radius="2xl"

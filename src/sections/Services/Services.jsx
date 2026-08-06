@@ -58,29 +58,33 @@ function ServiceCardContent({ category, reverse }) {
   );
 
   const placeholderBlock = (
-    <GlassCard radius="2xl" padding="lg" className="relative aspect-[4/5] w-full overflow-hidden">
+    <GlassCard
+      radius="2xl"
+      padding="lg"
+      className="relative aspect-[4/3] w-full overflow-hidden md:aspect-[3/4] lg:aspect-[4/5]"
+    >
       <GridBackground />
       <NoiseOverlay />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-16 -left-16 z-10 h-64 w-64 rounded-full bg-primary/25 blur-3xl"
       />
-    <div className="relative z-20 h-full w-full">
-  <Image
-    src={category.image}
-    alt={category.title}
-    fill
-    sizes="(max-width: 768px) 100vw, 50vw"
-    className="object-cover"
-    priority
-  />
-</div>
+      <div className="relative z-20 h-full w-full">
+        <Image
+          src={category.image}
+          alt={category.title}
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-cover"
+          priority
+        />
+      </div>
     </GlassCard>
   );
 
   return (
     <Container maxWidth="content" className="w-full">
-      <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <div className="grid grid-cols-1 items-center gap-8 md:gap-10 lg:grid-cols-2 lg:gap-20">
         {reverse ? (
           <>
             {placeholderBlock}
@@ -101,44 +105,58 @@ export default function Services() {
   const pinTargetRef = useRef(null);
   const cardRefs = useRef([]);
 
-  // Desktop only: pin the deck and scrub each incoming card's yPercent from
-  // 100 (fully below) to 0 (fully covering the previous one). Previous
-  // cards are never touched again once in place — no scale, no fade, no
-  // movement; they're simply covered by the next opaque card on top.
+  // Same pin + cover choreography at every breakpoint: each incoming card
+  // scrubs its yPercent from 100 (fully below) to 0 (fully covering the
+  // previous one). Previous cards are never touched again once in place —
+  // no scale, no fade, no movement; they're simply covered by the next
+  // opaque card on top. Only the pin distance scales down per tier
+  // (100% desktop / 90% tablet / 80% mobile) — the mechanism itself,
+  // including the pin, is identical everywhere.
   useEffect(() => {
     const mm = gsap.matchMedia();
 
-    mm.add("(min-width: 768px)", () => {
-      const cards = cardRefs.current.filter(Boolean);
-      if (!cards.length) return undefined;
+    mm.add(
+      {
+        isDesktop: "(min-width: 1024px)",
+        isTablet: "(min-width: 768px) and (max-width: 1023px)",
+        isMobile: "(max-width: 767px)",
+      },
+      (context) => {
+        const { isDesktop, isTablet } = context.conditions;
+        const cards = cardRefs.current.filter(Boolean);
+        if (!cards.length) return undefined;
 
-      // Pin must start below the fixed Navbar, and the pinned area's height
-      // has to shrink to match — otherwise its bottom edge would overshoot
-      // the viewport by the same amount.
-      const navbarOffset = measureNavbarHeight();
-      pinTargetRef.current?.style.setProperty("--navbar-offset", `${navbarOffset}px`);
+        // Pin must start below the fixed Navbar, and the pinned area's
+        // height has to shrink to match — otherwise its bottom edge would
+        // overshoot the viewport by the same amount.
+        const navbarOffset = measureNavbarHeight();
+        pinTargetRef.current?.style.setProperty("--navbar-offset", `${navbarOffset}px`);
 
-      cards.forEach((card, index) => {
-        gsap.set(card, { yPercent: index === 0 ? 0 : 100 });
-      });
+        const distanceRatio = isDesktop ? 1 : isTablet ? 0.9 : 0.8;
+        const distancePerCard = window.innerHeight * distanceRatio;
 
-      const result = pinSectionWithTimeline(
-        pinTargetRef.current,
-        (timeline) => {
-          cards.forEach((card, index) => {
-            if (index === 0) return;
-            timeline.to(card, { yPercent: 0, ease: "none", duration: 1 }, index - 1);
-          });
-        },
-        {
-          start: () => `top top+=${navbarOffset}`,
-          end: () => `+=${window.innerHeight * (cards.length - 1)}`,
-          scrub: 1,
-        }
-      );
+        cards.forEach((card, index) => {
+          gsap.set(card, { yPercent: index === 0 ? 0 : 100 });
+        });
 
-      return () => result?.scrollTrigger?.kill();
-    });
+        const result = pinSectionWithTimeline(
+          pinTargetRef.current,
+          (timeline) => {
+            cards.forEach((card, index) => {
+              if (index === 0) return;
+              timeline.to(card, { yPercent: 0, ease: "none", duration: 1 }, index - 1);
+            });
+          },
+          {
+            start: () => `top top+=${navbarOffset}`,
+            end: () => `+=${distancePerCard * (cards.length - 1)}`,
+            scrub: 1,
+          }
+        );
+
+        return () => result?.scrollTrigger?.kill();
+      }
+    );
 
     return () => mm.revert();
   }, []);
@@ -157,7 +175,7 @@ export default function Services() {
       <div
         ref={pinTargetRef}
         style={{ "--navbar-offset": `${DEFAULT_NAVBAR_HEIGHT}px` }}
-        className="relative mt-16 flex flex-col gap-20 md:h-[calc(100vh-var(--navbar-offset))] md:gap-0 md:overflow-hidden"
+        className="relative mt-16 h-[calc(100vh-var(--navbar-offset))] overflow-hidden"
       >
         {SERVICE_CATEGORIES.map((category, index) => (
           <div
@@ -166,7 +184,7 @@ export default function Services() {
               cardRefs.current[index] = el;
             }}
             style={{ zIndex: index + 1 }}
-            className="relative w-full py-16 md:absolute md:inset-0 md:flex md:h-full md:items-center md:bg-background md:py-0"
+            className="absolute inset-0 flex h-full items-start overflow-y-auto bg-background py-10 md:items-center md:py-0"
           >
             <ServiceCardContent category={category} reverse={index % 2 === 1} />
           </div>
