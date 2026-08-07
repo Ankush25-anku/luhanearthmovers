@@ -9,16 +9,19 @@ import HeroContent from "./HeroContent";
  * viewport tall; HeroCanvas pins it via ScrollTrigger and scrubs its frame
  * sequence across that pin. ScrollTrigger's own pin is the ONLY thing that
  * makes this viewport-locked — every layer below is `absolute inset-0`
- * (sized to this `relative h-dvh` section), not independently `fixed`,
+ * (sized to this `relative` section), not independently `fixed`,
  * so once the pin releases they scroll away naturally with the section
  * instead of staying glued to the viewport over every section after it.
+ * Mobile uses `100svh` (the smallest guaranteed viewport, so content can
+ * never be pushed outside it as the browser chrome shows/hides) — tablet
+ * and desktop keep the original `dvh` unchanged.
  * HeroContent renders last so it stacks above canvas/overlay/particles;
  * it reads the same pinned scroll range via its own ScrollTrigger and never
  * touches HeroCanvas or its animation.
  */
 export default function Hero() {
   return (
-    <section id="home" className="relative h-dvh overflow-hidden">
+    <section id="home" className="relative h-[100svh] overflow-hidden md:h-dvh">
       <HeroCanvas />
       <HeroOverlay />
       <HeroParticles />

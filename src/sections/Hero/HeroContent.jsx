@@ -142,11 +142,12 @@ export default function HeroContent() {
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 z-30">
-      {/* Mobile: content's bottom edge sits 120px above the viewport edge
-          (explicit pb-[120px], not the design-system spacing scale) —
-          tighter top padding too, since "hide unnecessary spacing" only
-          applies below md: tablet/desktop padding is unchanged. */}
-      <div className="absolute inset-x-0 bottom-0 px-6 pb-[120px] pt-10 md:px-10 md:pb-24 md:pt-24 lg:px-14 lg:pb-28">
+      {/* Mobile: explicit left/right/bottom inset (not padding-on-a-full-
+          width-bar) so the container is exactly as wide as the content
+          needs to be — no top padding, no large vertical spacing. Tablet
+          (md:) and desktop (lg:) revert to the original inset-x-0/padding
+          approach, unchanged. */}
+      <div className="absolute bottom-[90px] left-6 right-6 md:inset-x-0 md:bottom-0 md:px-10 md:pb-24 md:pt-24 lg:px-14 lg:pb-28">
         <div className="relative mx-auto w-full max-w-[var(--max-w-page)]">
           {/* Soft scrim sized to the text block only — no full-height/solid
               background, the bulldozer stays visible around and behind it. */}
@@ -163,7 +164,7 @@ export default function HeroContent() {
 
           <p
             ref={eyebrowRef}
-            className="text-caption mt-4 tracking-[0.2em] text-primary uppercase"
+            className="mt-2 text-[0.65rem] tracking-[0.2em] text-primary uppercase md:mt-4 md:text-caption"
           >
             {EYEBROW_TEXT}
           </p>
@@ -171,7 +172,7 @@ export default function HeroContent() {
           {/* All 3 chapters share one grid cell (row-start-1/col-start-1) so
               the block is always sized to whichever is tallest and bottom-
               aligned within it — GSAP crossfades which one is visible. */}
-          <div className="mt-3 grid md:mt-4">
+          <div className="mt-2 grid md:mt-4">
             {CHAPTERS.map((chapter, index) => (
               <div
                 key={index}
@@ -187,18 +188,20 @@ export default function HeroContent() {
               >
                 <h1
                   className={[
-                    "font-heading font-bold uppercase tracking-[-0.04em] text-text",
+                    "font-heading font-bold uppercase text-text",
                     // Font size: distinct clamp() per tier, not one formula
                     // scaled continuously — mobile/tablet/desktop each need
                     // their own ceiling so the heading never overpowers the
                     // frame (desktop) or overflows it (mobile).
-                    "text-[clamp(2rem,9vw,3rem)] md:text-[clamp(2.8rem,6vw,4rem)] lg:text-[clamp(3.5rem,5vw,5.5rem)]",
-                    // Max-width caps how far the heading can stretch at
-                    // each tier, so it reads as a column of text beside the
-                    // machine rather than a banner across the whole scene.
-                    "max-w-[330px] md:max-w-[650px] lg:max-w-[900px]",
-                    // Line-height tightens as the type gets larger.
-                    "leading-[1.05] md:leading-[1.0] lg:leading-[0.95]",
+                    "text-[clamp(1.8rem,8vw,2.5rem)] md:text-[clamp(2.8rem,6vw,4rem)] lg:text-[clamp(3.5rem,5vw,5.5rem)]",
+                    // Max-width caps how far the heading can stretch at each
+                    // tier — narrow enough on mobile (280px) that each
+                    // logical line wraps again naturally into 2–3 short
+                    // sub-lines instead of running edge-to-edge.
+                    "max-w-[280px] md:max-w-[650px] lg:max-w-[900px]",
+                    // Line-height/letter-spacing both tighten as the type
+                    // gets larger.
+                    "leading-[0.95] tracking-[-0.03em] md:leading-[1.0] md:tracking-[-0.04em] lg:leading-[0.95]",
                   ].join(" ")}
                 >
                   {chapter.heading.map((line, lineIndex) => (
@@ -208,7 +211,7 @@ export default function HeroContent() {
                   ))}
                 </h1>
 
-                <div className="text-body mt-4 max-w-[var(--max-w-prose)] text-text-muted md:mt-5 md:text-body-lg">
+                <div className="mt-2 max-w-[300px] text-[0.85rem] leading-[1.5] text-text-muted md:mt-5 md:max-w-[var(--max-w-prose)] md:text-body-lg">
                   {chapter.description.map((line, lineIndex) => (
                     <span key={lineIndex} className="block">
                       {line}
@@ -224,10 +227,19 @@ export default function HeroContent() {
       <div
         ref={indicatorGroupRef}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-6 flex flex-col items-center gap-3 md:bottom-8"
+        className="pointer-events-none absolute inset-x-0 bottom-8 flex flex-col items-center gap-2 md:gap-3"
       >
-        <span className="text-caption tracking-[0.3em] text-text-muted uppercase">Scroll</span>
-        <span ref={indicatorLineRef} className="w-px bg-primary" style={{ height: 0 }} />
+        <span className="text-[0.6rem] tracking-[0.3em] text-text-muted uppercase md:text-caption">
+          Scroll
+        </span>
+        {/* max-h-10 caps the GSAP-animated line at 40px on mobile (it still
+            tweens toward 60px, just visually clamped smaller) — tablet/
+            desktop are uncapped, so the animation itself is unchanged. */}
+        <span
+          ref={indicatorLineRef}
+          className="max-h-10 w-px bg-primary md:max-h-none"
+          style={{ height: 0 }}
+        />
       </div>
     </div>
   );

@@ -143,13 +143,16 @@ export default function Services() {
   const pinTargetRef = useRef(null);
   const cardRefs = useRef([]);
 
-  // Same pin + cover choreography at every breakpoint: each incoming card
-  // scrubs its yPercent from 100 (fully below) to 0 (fully covering the
-  // previous one). Previous cards are never touched again once in place —
-  // no scale, no fade, no movement; they're simply covered by the next
-  // opaque card on top. Only the pin distance scales down per tier
-  // (100% desktop / 75% tablet / 50% mobile) — the mechanism itself,
-  // including the pin, is identical everywhere.
+  // Desktop/tablet keep the original pin + cover choreography untouched:
+  // each incoming card scrubs its yPercent from 100 (fully below) to 0
+  // (fully covering the previous one), which is why those cards never need
+  // their own opacity/pointer-events handling — being physically off-screen
+  // already makes them non-interactive. Mobile gets a structurally
+  // different mechanism (see buildMobileTimeline below): a gentle
+  // opacity/x/y/scale crossfade in place, because the full-height cover
+  // slide is what read as "moves too fast" / "jumps" on a real touch
+  // device — the transform distance was simply too large for a finger
+  // gesture to feel like it's driving it smoothly.
   useEffect(() => {
     const mm = gsap.matchMedia();
 
@@ -160,7 +163,7 @@ export default function Services() {
         isMobile: "(max-width: 767px)",
       },
       (context) => {
-        const { isDesktop, isTablet, isMobile } = context.conditions;
+        const { isDesktop, isMobile } = context.conditions;
         const cards = cardRefs.current.filter(Boolean);
         if (!cards.length) return undefined;
 
@@ -170,17 +173,64 @@ export default function Services() {
         const navbarOffset = measureNavbarHeight();
         pinTargetRef.current?.style.setProperty("--navbar-offset", `${navbarOffset}px`);
 
-        // Desktop unchanged (1). Tablet trimmed a bit further (0.9 → 0.75).
-        // Mobile stays at roughly half (0.5, from an earlier pass) — same
-        // card-cover effect, but reaching it takes noticeably less finger
-        // travel, which is most of what "scroll feels heavy entering
-        // Services" actually was: too much distance asked of a touch gesture.
-        const distanceRatio = isDesktop ? 1 : isTablet ? 0.75 : 0.5;
+        if (isMobile) {
+          // Cards stay in place and crossfade — no card is ever physically
+          // off-screen, so pointerEvents has to do the job yPercent:100 used
+          // to do for free: keeping every non-active card from swallowing
+          // touches meant for the one actually visible underneath it.
+          cards.forEach((card, index) => {
+            gsap.set(card, {
+              opacity: index === 0 ? 1 : 0,
+              x: index === 0 ? 0 : 20,
+              y: index === 0 ? 0 : 30,
+              scale: index === 0 ? 1 : 0.98,
+              pointerEvents: index === 0 ? "auto" : "none",
+            });
+          });
+
+          // ~120% total scroll distance for a 3-card section (reduced from
+          // the cover mechanic's own mobile tuning) — a subtle crossfade
+          // needs less scroll "work" to read as a full transition than a
+          // full-height slide did.
+          const distancePerCard = window.innerHeight * 0.6;
+
+          const result = pinSectionWithTimeline(
+            pinTargetRef.current,
+            (timeline) => {
+              cards.forEach((card, index) => {
+                if (index === 0) return;
+                const outgoing = cards[index - 1];
+                timeline
+                  .to(outgoing, { opacity: 0, pointerEvents: "none", duration: 0.8, ease: "power1.out" }, index - 1)
+                  .to(
+                    card,
+                    { opacity: 1, x: 0, y: 0, scale: 1, pointerEvents: "auto", duration: 1, ease: "power2.out" },
+                    index - 1
+                  );
+              });
+            },
+            {
+              start: () => `top top+=${navbarOffset}`,
+              end: () => `+=${distancePerCard * (cards.length - 1)}`,
+              // Heavier scrub than the old mobile tuning (0.5 → 0.8) — the
+              // complaint this round was the transition feeling like it
+              // jumps/catches, and a bit more smoothing between finger
+              // input and the crossfade fixes exactly that.
+              scrub: 0.8,
+              pinSpacing: true,
+              anticipatePin: 1,
+              invalidateOnRefresh: true,
+              fastScrollEnd: true,
+            }
+          );
+
+          return () => result?.scrollTrigger?.kill();
+        }
+
+        // Desktop/tablet — byte-for-byte the same mechanism as before.
+        const distanceRatio = isDesktop ? 1 : 0.75;
         const distancePerCard = window.innerHeight * distanceRatio;
-        // Desktop keeps its original scrub value exactly; a lighter scrub on
-        // tablet/mobile tracks the finger more closely — same cover effect,
-        // less scroll-linked recompute work per frame on weaker devices.
-        const scrubAmount = isDesktop ? 1 : isTablet ? 0.6 : 0.5;
+        const scrubAmount = isDesktop ? 1 : 0.6;
 
         cards.forEach((card, index) => {
           gsap.set(card, { yPercent: index === 0 ? 0 : 100 });
@@ -200,13 +250,6 @@ export default function Services() {
             scrub: scrubAmount,
             anticipatePin: 1,
             invalidateOnRefresh: true,
-            // Only on mobile: if a fast fling scrolls past the pin's end in
-            // a single tick, snap the timeline straight to its end state
-            // instead of the scrub "catching up" over the next few frames —
-            // that catch-up is exactly what read as delayed/jumpy on touch.
-            // Desktop/tablet scroll velocities never realistically trigger
-            // this, so their feel is unaffected either way.
-            fastScrollEnd: isMobile,
           }
         );
 
