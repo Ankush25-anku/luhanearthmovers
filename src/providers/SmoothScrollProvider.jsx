@@ -90,24 +90,58 @@ export default function SmoothScrollProvider({ children }) {
     window.addEventListener("load", refreshScrollTrigger);
 
     // Mobile browsers resize the *visual* viewport (not `window`) when the
-    // address bar collapses/expands during a scroll gesture — a pinned
-    // section's start/end, measured in pixels against the viewport height
-    // at mount, silently goes stale the first time that happens, and every
-    // pin on the page pins/unpins a few dozen pixels off from where the
-    // user's finger actually is. That's the "hangs / jumps / feels
-    // reversed, only on a real phone" signature: `visualViewport` doesn't
+    // address bar collapses/expands — a pinned section's start/end,
+    // measured in pixels against the viewport height at mount, silently
+    // goes stale the first time that happens. `visualViewport` doesn't
     // exist in Chrome DevTools' device simulation the same way, and desktop
     // has no collapsing chrome at all, so neither ever surfaces this.
+    //
+    // But the address bar collapsing on scroll-down and re-expanding on
+    // scroll-up is *exactly* what a quick down-then-up reversal triggers —
+    // so refreshing immediately on every one of these events means
+    // ScrollTrigger.refresh() (which re-measures every trigger on the page
+    // and forces layout) can run while the finger is still on the glass.
+    // That's a plausible root cause for "freezes/jumps mid-gesture, only on
+    // a real touch device": a touch-active flag defers the refresh to
+    // touchend instead, so it still corrects stale measurements but never
+    // runs mid-scroll. Both listeners are passive (no preventDefault) and
+    // never intercept the gesture itself.
+    let isTouching = false;
+    let refreshPending = false;
     let viewportRefreshFrame = null;
+
+    const handleTouchStart = () => {
+      isTouching = true;
+    };
+    const handleTouchEnd = () => {
+      isTouching = false;
+      if (refreshPending) {
+        refreshPending = false;
+        refreshScrollTrigger();
+      }
+    };
     const handleViewportResize = () => {
       if (viewportRefreshFrame) cancelAnimationFrame(viewportRefreshFrame);
-      viewportRefreshFrame = requestAnimationFrame(refreshScrollTrigger);
+      viewportRefreshFrame = requestAnimationFrame(() => {
+        if (isTouching) {
+          refreshPending = true;
+          return;
+        }
+        refreshScrollTrigger();
+      });
     };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", handleTouchEnd, { passive: true });
     window.visualViewport?.addEventListener("resize", handleViewportResize);
 
     return () => {
       if (viewportRefreshFrame) cancelAnimationFrame(viewportRefreshFrame);
       window.visualViewport?.removeEventListener("resize", handleViewportResize);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("touchcancel", handleTouchEnd);
       window.removeEventListener("load", refreshScrollTrigger);
       gsap.ticker.remove(syncWithGsapTicker);
       lenis.destroy();
