@@ -15,7 +15,6 @@ import NoiseOverlay from "@/components/common/NoiseOverlay";
 
 import { SERVICE_CATEGORIES } from "@/data/services";
 import { pinSectionWithTimeline } from "@/animations/gsap/pinSection";
-import { fadeUp } from "@/animations/gsap/reveal";
 
 // Navbar's own unscrolled height (src/components/navigation/Navbar.jsx: h-24).
 // Used as the SSR-safe default and as a fallback if the header can't be measured.
@@ -36,6 +35,49 @@ function scheduleServicesRefresh() {
   if (typeof window === "undefined") return;
   if (refreshFrame) cancelAnimationFrame(refreshFrame);
   refreshFrame = requestAnimationFrame(() => ScrollTrigger.refresh());
+}
+
+/**
+ * Mobile-only card reveal — opacity + y (+ scale for the image only),
+ * reversible (toggleActions "play none none reverse": scrolling back up
+ * past the card plays it backward instead of leaving it half-triggered).
+ * Not built on the shared `fadeUp` helper because `fadeUp` doesn't support
+ * scale or per-tween start/complete callbacks. `will-change` is applied
+ * only for the duration of the tween (set on start, cleared on both
+ * forward and reverse completion) so the browser isn't asked to keep a
+ * compositing layer around indefinitely for a card that finished animating
+ * minutes ago.
+ */
+function revealServiceElement(target, { y, scale, delay = 0 } = {}) {
+  const el = typeof target === "string" ? document.querySelector(target) : target;
+  if (!el) return null;
+
+  const clearWillChange = () => {
+    el.style.willChange = "auto";
+  };
+
+  return gsap.fromTo(
+    el,
+    { autoAlpha: 0, y, ...(scale !== undefined ? { scale } : {}) },
+    {
+      autoAlpha: 1,
+      y: 0,
+      ...(scale !== undefined ? { scale: 1 } : {}),
+      duration: 0.9,
+      delay,
+      ease: "power3.out",
+      onStart: () => {
+        el.style.willChange = "transform, opacity";
+      },
+      onComplete: clearWillChange,
+      onReverseComplete: clearWillChange,
+      scrollTrigger: {
+        trigger: el,
+        start: "top 85%",
+        toggleActions: "play none none reverse",
+      },
+    }
+  );
 }
 
 /**
@@ -158,8 +200,8 @@ export default function Services() {
   // finger scrolling — exactly the condition real touch devices handle
   // worst, which is what "scroll up suddenly → stuck/jumps/hangs" was.
   // Removing the pin removes that whole failure class: mobile cards are
-  // normal, static, in-flow sections, and each one just reveals once via
-  // the shared `fadeUp` helper when it scrolls into view — no scrub, no
+  // normal, static, in-flow sections, and each one reveals (and reverses)
+  // via revealServiceElement as it scrolls into/out of view — no scrub, no
   // pin, no long scroll distance, nothing for a direction reversal to
   // desynchronize.
   useEffect(() => {
@@ -182,8 +224,8 @@ export default function Services() {
               const image = card.querySelector("[data-service-image]");
               const content = card.querySelector("[data-service-content]");
               return [
-                fadeUp(image, { y: 40, duration: 0.8, start: "top 85%", once: true }),
-                fadeUp(content, { y: 30, duration: 0.7, delay: 0.1, start: "top 85%", once: true }),
+                revealServiceElement(image, { y: 50, scale: 0.96 }),
+                revealServiceElement(content, { y: 40, delay: 0.1 }),
               ];
             })
             .filter(Boolean);
