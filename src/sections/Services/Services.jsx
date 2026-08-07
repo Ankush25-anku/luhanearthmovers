@@ -15,6 +15,7 @@ import NoiseOverlay from "@/components/common/NoiseOverlay";
 
 import { SERVICE_CATEGORIES } from "@/data/services";
 import { pinSectionWithTimeline } from "@/animations/gsap/pinSection";
+import { fadeUp } from "@/animations/gsap/reveal";
 
 // Navbar's own unscrolled height (src/components/navigation/Navbar.jsx: h-24).
 // Used as the SSR-safe default and as a fallback if the header can't be measured.
@@ -41,19 +42,21 @@ function scheduleServicesRefresh() {
  * One category's content — text column + glass placeholder. Fully data-driven.
  *
  * Mobile-only spacing/type-scale is deliberately tighter than tablet/desktop
- * (the `md:`/`lg:` values below are all unchanged from before): each mobile
- * card is single-column and has to fit title + description + a 3-item list
- * + CTA inside one pinned viewport-height screen, or the card's own
- * `overflow-y-auto` (Services.jsx) kicks in and the finger has to scroll the
- * *card's* content before the outer pinned transition can advance — that
- * competing inner/outer scroll is what read as "stuck," "late," and
- * "momentum broken". Every size used here is an existing design-system
- * token (text-h2, text-body, gap-2, mt-3, …), just a smaller one than
- * tablet/desktop use — no new scale was introduced.
+ * (the `md:`/`lg:` values below are all unchanged from before) — a holdover
+ * from when mobile cards had to fit a pinned viewport-height screen. Mobile
+ * no longer pins (see Services() below), so this is no longer a hard
+ * requirement, just a kept, already-working compact treatment. Every size
+ * used here is an existing design-system token (text-h2, text-body, gap-2,
+ * mt-3, …), just a smaller one than tablet/desktop use — no new scale was
+ * introduced.
+ *
+ * `data-service-image`/`data-service-content` are query targets for the
+ * mobile-only fadeUp reveal in Services() — not used by the desktop/tablet
+ * pin mechanic, which animates the whole card instead.
  */
 function ServiceCardContent({ category, reverse, isFirst }) {
   const textBlock = (
-    <div>
+    <div data-service-content>
       <h3 className="text-h2 text-text md:text-h1">{category.title}</h3>
 
       <p className="text-body mt-3 max-w-[var(--max-w-prose)] text-text-muted md:text-body-lg md:mt-5">
@@ -82,42 +85,44 @@ function ServiceCardContent({ category, reverse, isFirst }) {
   );
 
   const placeholderBlock = (
-    <GlassCard
-      radius="2xl"
-      padding="lg"
-      // Mobile: a short, wide box (16/10) instead of the original 4/3 — the
-      // image itself is object-contain (below) so this alone never crops
-      // it, it just controls how much vertical space the card spends on the
-      // image versus the text underneath. Tablet (md:) and desktop (lg:)
-      // aspect ratios are untouched.
-      className="relative aspect-[16/10] w-full overflow-hidden md:aspect-[3/4] lg:aspect-[4/5]"
-    >
-      <GridBackground />
-      <NoiseOverlay />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-16 -left-16 z-10 h-64 w-64 rounded-full bg-primary/25 blur-3xl"
-      />
-      <div className="relative z-20 h-full w-full">
-        <Image
-          src={category.image}
-          alt={category.title}
-          fill
-          sizes="(max-width: 768px) 100vw, 50vw"
-          // Mobile: show the complete image, no cropping/zoom (letterboxed
-          // into the same card on the grid/noise backdrop if the aspect
-          // ratio doesn't match exactly). Tablet/desktop (md: and up)
-          // keep the original object-cover fill unchanged.
-          className="object-contain md:object-cover"
-          // Only the first category is visible the instant the pinned
-          // section is entered (the other two start off-screen below it) —
-          // loading it eagerly avoids a pop-in if the user flings straight
-          // into Services. Cards 2/3 stay lazy.
-          priority={isFirst}
-          onLoad={scheduleServicesRefresh}
+    <div data-service-image>
+      <GlassCard
+        radius="2xl"
+        padding="lg"
+        // Mobile is no longer height-constrained (it isn't pinned — see
+        // Services() below), so its box can be a normal, generous
+        // photographic ratio again instead of the short 16/10 a pinned
+        // viewport-height screen used to require. object-contain still
+        // guarantees the full image is visible either way. Tablet (md:) and
+        // desktop (lg:) aspect ratios are untouched.
+        className="relative aspect-[4/3] w-full overflow-hidden md:aspect-[3/4] lg:aspect-[4/5]"
+      >
+        <GridBackground />
+        <NoiseOverlay />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-16 -left-16 z-10 h-64 w-64 rounded-full bg-primary/25 blur-3xl"
         />
-      </div>
-    </GlassCard>
+        <div className="relative z-20 h-full w-full">
+          <Image
+            src={category.image}
+            alt={category.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            // Mobile: show the complete image, no cropping/zoom. Tablet/
+            // desktop (md: and up) keep the original object-cover fill
+            // unchanged.
+            className="object-contain md:object-cover"
+            // The first category is the first thing visible when the user
+            // reaches Services (mobile: first in normal flow; desktop/
+            // tablet: the only card in place when the pin engages) —
+            // loading it eagerly avoids a pop-in. Cards 2/3 stay lazy.
+            priority={isFirst}
+            onLoad={scheduleServicesRefresh}
+          />
+        </div>
+      </GlassCard>
+    </div>
   );
 
   return (
@@ -143,16 +148,20 @@ export default function Services() {
   const pinTargetRef = useRef(null);
   const cardRefs = useRef([]);
 
-  // Desktop/tablet keep the original pin + cover choreography untouched:
-  // each incoming card scrubs its yPercent from 100 (fully below) to 0
-  // (fully covering the previous one), which is why those cards never need
-  // their own opacity/pointer-events handling — being physically off-screen
-  // already makes them non-interactive. Mobile gets a structurally
-  // different mechanism (see buildMobileTimeline below): a gentle
-  // opacity/x/y/scale crossfade in place, because the full-height cover
-  // slide is what read as "moves too fast" / "jumps" on a real touch
-  // device — the transform distance was simply too large for a finger
-  // gesture to feel like it's driving it smoothly.
+  // Desktop/tablet keep the original pin + cover choreography completely
+  // untouched: each incoming card scrubs its yPercent from 100 (fully
+  // below) to 0 (fully covering the previous one).
+  //
+  // Mobile no longer pins at all. A pinned, scrubbed transition (even the
+  // lighter crossfade tried in an earlier pass) still depends on
+  // ScrollTrigger's pin boundaries staying accurate through rapid, reversed
+  // finger scrolling — exactly the condition real touch devices handle
+  // worst, which is what "scroll up suddenly → stuck/jumps/hangs" was.
+  // Removing the pin removes that whole failure class: mobile cards are
+  // normal, static, in-flow sections, and each one just reveals once via
+  // the shared `fadeUp` helper when it scrolls into view — no scrub, no
+  // pin, no long scroll distance, nothing for a direction reversal to
+  // desynchronize.
   useEffect(() => {
     const mm = gsap.matchMedia();
 
@@ -167,67 +176,33 @@ export default function Services() {
         const cards = cardRefs.current.filter(Boolean);
         if (!cards.length) return undefined;
 
+        if (isMobile) {
+          const tweens = cards
+            .flatMap((card) => {
+              const image = card.querySelector("[data-service-image]");
+              const content = card.querySelector("[data-service-content]");
+              return [
+                fadeUp(image, { y: 40, duration: 0.8, start: "top 85%", once: true }),
+                fadeUp(content, { y: 30, duration: 0.7, delay: 0.1, start: "top 85%", once: true }),
+              ];
+            })
+            .filter(Boolean);
+
+          return () => {
+            tweens.forEach((tween) => {
+              tween.scrollTrigger?.kill();
+              tween.kill();
+            });
+          };
+        }
+
+        // Desktop/tablet — byte-for-byte the same mechanism as before.
         // Pin must start below the fixed Navbar, and the pinned area's
         // height has to shrink to match — otherwise its bottom edge would
         // overshoot the viewport by the same amount.
         const navbarOffset = measureNavbarHeight();
         pinTargetRef.current?.style.setProperty("--navbar-offset", `${navbarOffset}px`);
 
-        if (isMobile) {
-          // Cards stay in place and crossfade — no card is ever physically
-          // off-screen, so pointerEvents has to do the job yPercent:100 used
-          // to do for free: keeping every non-active card from swallowing
-          // touches meant for the one actually visible underneath it.
-          cards.forEach((card, index) => {
-            gsap.set(card, {
-              opacity: index === 0 ? 1 : 0,
-              x: index === 0 ? 0 : 20,
-              y: index === 0 ? 0 : 30,
-              scale: index === 0 ? 1 : 0.98,
-              pointerEvents: index === 0 ? "auto" : "none",
-            });
-          });
-
-          // ~120% total scroll distance for a 3-card section (reduced from
-          // the cover mechanic's own mobile tuning) — a subtle crossfade
-          // needs less scroll "work" to read as a full transition than a
-          // full-height slide did.
-          const distancePerCard = window.innerHeight * 0.6;
-
-          const result = pinSectionWithTimeline(
-            pinTargetRef.current,
-            (timeline) => {
-              cards.forEach((card, index) => {
-                if (index === 0) return;
-                const outgoing = cards[index - 1];
-                timeline
-                  .to(outgoing, { opacity: 0, pointerEvents: "none", duration: 0.8, ease: "power1.out" }, index - 1)
-                  .to(
-                    card,
-                    { opacity: 1, x: 0, y: 0, scale: 1, pointerEvents: "auto", duration: 1, ease: "power2.out" },
-                    index - 1
-                  );
-              });
-            },
-            {
-              start: () => `top top+=${navbarOffset}`,
-              end: () => `+=${distancePerCard * (cards.length - 1)}`,
-              // Heavier scrub than the old mobile tuning (0.5 → 0.8) — the
-              // complaint this round was the transition feeling like it
-              // jumps/catches, and a bit more smoothing between finger
-              // input and the crossfade fixes exactly that.
-              scrub: 0.8,
-              pinSpacing: true,
-              anticipatePin: 1,
-              invalidateOnRefresh: true,
-              fastScrollEnd: true,
-            }
-          );
-
-          return () => result?.scrollTrigger?.kill();
-        }
-
-        // Desktop/tablet — byte-for-byte the same mechanism as before.
         const distanceRatio = isDesktop ? 1 : 0.75;
         const distancePerCard = window.innerHeight * distanceRatio;
         const scrubAmount = isDesktop ? 1 : 0.6;
@@ -271,10 +246,13 @@ export default function Services() {
         />
       </Container>
 
+      {/* Mobile: plain, auto-height, normal-flow wrapper — no pin, no fixed
+          viewport height, no hidden overflow. Tablet (md:) and desktop
+          (lg: inherits md:) restore the exact original pinned-stack sizing. */}
       <div
         ref={pinTargetRef}
         style={{ "--navbar-offset": `${DEFAULT_NAVBAR_HEIGHT}px` }}
-        className="relative mt-16 h-[calc(100dvh-var(--navbar-offset))] overflow-hidden"
+        className="relative mt-16 md:h-[calc(100dvh-var(--navbar-offset))] md:overflow-hidden"
       >
         {SERVICE_CATEGORIES.map((category, index) => (
           <div
@@ -283,15 +261,12 @@ export default function Services() {
               cardRefs.current[index] = el;
             }}
             style={{ zIndex: index + 1 }}
-            // Mobile: py-6 (was py-10) — the extra 32px went toward giving
-            // the compacted content in ServiceCardContent more room to fit
-            // one pinned viewport-height screen without needing this div's
-            // own overflow-y-auto to kick in (that inner scroll, competing
-            // with the outer pinned page-scroll for the same touch gesture,
-            // was the "pin feels stuck / content appears late" bug).
-            // overflow-y-auto stays as a safety net for any edge-case
-            // content length, but the goal is for it to rarely engage.
-            className="absolute inset-0 flex h-full items-start overflow-y-auto bg-background py-6 md:items-center md:py-0"
+            // Mobile: each card is a normal, static, in-flow block — its
+            // own vertical section, not absolutely stacked inside a pinned
+            // container. md:/lg: below reproduce the original pinned-stack
+            // styling for tablet/desktop exactly (absolute, full height,
+            // centered, its own inner scroll safety net).
+            className="relative bg-background py-16 md:absolute md:inset-0 md:flex md:h-full md:items-center md:overflow-y-auto md:py-0"
           >
             <ServiceCardContent
               category={category}
