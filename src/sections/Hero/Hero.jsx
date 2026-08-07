@@ -1,7 +1,7 @@
 import HeroCanvas from "./HeroCanvas";
 import HeroOverlay from "./HeroOverlay";
 import HeroParticles from "./HeroParticles";
-// import HeroContent from "./HeroContent";
+import HeroContent from "./HeroContent";
 
 /**
  * Hero
@@ -12,6 +12,9 @@ import HeroParticles from "./HeroParticles";
  * (sized to this `relative h-dvh` section), not independently `fixed`,
  * so once the pin releases they scroll away naturally with the section
  * instead of staying glued to the viewport over every section after it.
+ * HeroContent renders last so it stacks above canvas/overlay/particles;
+ * it reads the same pinned scroll range via its own ScrollTrigger and never
+ * touches HeroCanvas or its animation.
  */
 export default function Hero() {
   return (
@@ -19,7 +22,7 @@ export default function Hero() {
       <HeroCanvas />
       <HeroOverlay />
       <HeroParticles />
-      {/* <HeroContent /> */}
+      <HeroContent />
     </section>
   );
 }
