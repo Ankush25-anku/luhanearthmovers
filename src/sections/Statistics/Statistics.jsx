@@ -161,7 +161,7 @@ export default function Statistics() {
         isMobile: "(max-width: 767px)",
       },
       (context) => {
-        const { isDesktop, isTablet } = context.conditions;
+        const { isDesktop, isTablet, isMobile } = context.conditions;
         const panels = panelRefs.current.filter(Boolean);
         if (!panels.length) return undefined;
 
@@ -216,6 +216,13 @@ export default function Statistics() {
             start: () => `top top+=${navbarOffset}`,
             end: () => `+=${distancePerPanel * (panels.length - 1)}`,
             scrub: scrubAmount,
+            invalidateOnRefresh: true,
+            // Mobile-safe settings (touch scrolling stability), matching
+            // what Services' pin used before it moved off pinning entirely.
+            // Same panel-swap effect and choreography either way — this
+            // only changes how the pin's own ScrollTrigger recovers from a
+            // fast fling or a mid-gesture refresh, not what it looks like.
+            fastScrollEnd: isMobile,
             onUpdate: (self) => {
               const idx = Math.min(panels.length - 1, Math.floor(self.progress * panels.length));
               setActive(idx);

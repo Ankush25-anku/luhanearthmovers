@@ -100,45 +100,63 @@ export default function SmoothScrollProvider({ children }) {
     // scroll-up is *exactly* what a quick down-then-up reversal triggers —
     // so refreshing immediately on every one of these events means
     // ScrollTrigger.refresh() (which re-measures every trigger on the page
-    // and forces layout) can run while the finger is still on the glass.
-    // That's a plausible root cause for "freezes/jumps mid-gesture, only on
-    // a real touch device": a touch-active flag defers the refresh to
-    // touchend instead, so it still corrects stale measurements but never
-    // runs mid-scroll. Both listeners are passive (no preventDefault) and
-    // never intercept the gesture itself.
+    // and forces layout) can run mid-gesture. Worse, momentum scrolling
+    // continues for a beat *after* the finger lifts, so gating on
+    // touchstart/touchend alone isn't enough — a refresh fired the instant
+    // the finger lifts can still land while the page is still coasting.
+    // Below, any queued refresh waits for SCROLL_IDLE_MS of genuine
+    // quiet — no touch *and* no scroll movement (including momentum) —
+    // before it's allowed to run. Every listener here is passive (no
+    // preventDefault) and never intercepts the gesture itself.
+    const SCROLL_IDLE_MS = 150;
     let isTouching = false;
-    let refreshPending = false;
+    let refreshQueued = false;
+    let idleTimer = null;
     let viewportRefreshFrame = null;
+
+    const armIdleCheck = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => {
+        if (isTouching || !refreshQueued) return;
+        refreshQueued = false;
+        refreshScrollTrigger();
+      }, SCROLL_IDLE_MS);
+    };
 
     const handleTouchStart = () => {
       isTouching = true;
     };
     const handleTouchEnd = () => {
       isTouching = false;
-      if (refreshPending) {
-        refreshPending = false;
-        refreshScrollTrigger();
-      }
+      if (refreshQueued) armIdleCheck();
+    };
+    // Lenis fires this on every frame of active scroll — including native
+    // touch momentum, which it only ever passively observes (see
+    // `syncTouch` above) but still relays here. Any of these pushes a
+    // queued refresh further out, so it only ever lands once scrolling has
+    // actually stopped.
+    const handleLenisScroll = () => {
+      if (refreshQueued) armIdleCheck();
     };
     const handleViewportResize = () => {
       if (viewportRefreshFrame) cancelAnimationFrame(viewportRefreshFrame);
       viewportRefreshFrame = requestAnimationFrame(() => {
-        if (isTouching) {
-          refreshPending = true;
-          return;
-        }
-        refreshScrollTrigger();
+        refreshQueued = true;
+        armIdleCheck();
       });
     };
 
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
     window.addEventListener("touchend", handleTouchEnd, { passive: true });
     window.addEventListener("touchcancel", handleTouchEnd, { passive: true });
+    lenis.on("scroll", handleLenisScroll);
     window.visualViewport?.addEventListener("resize", handleViewportResize);
 
     return () => {
       if (viewportRefreshFrame) cancelAnimationFrame(viewportRefreshFrame);
+      if (idleTimer) clearTimeout(idleTimer);
       window.visualViewport?.removeEventListener("resize", handleViewportResize);
+      lenis.off("scroll", handleLenisScroll);
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchend", handleTouchEnd);
       window.removeEventListener("touchcancel", handleTouchEnd);
