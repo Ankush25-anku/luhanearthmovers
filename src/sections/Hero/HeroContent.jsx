@@ -142,7 +142,11 @@ export default function HeroContent() {
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 z-30">
-      <div className="absolute inset-x-0 bottom-0 px-6 pb-20 pt-24 md:px-10 md:pb-24 lg:px-14 lg:pb-28">
+      {/* Mobile: content's bottom edge sits 120px above the viewport edge
+          (explicit pb-[120px], not the design-system spacing scale) —
+          tighter top padding too, since "hide unnecessary spacing" only
+          applies below md: tablet/desktop padding is unchanged. */}
+      <div className="absolute inset-x-0 bottom-0 px-6 pb-[120px] pt-10 md:px-10 md:pb-24 md:pt-24 lg:px-14 lg:pb-28">
         <div className="relative mx-auto w-full max-w-[var(--max-w-page)]">
           {/* Soft scrim sized to the text block only — no full-height/solid
               background, the bulldozer stays visible around and behind it. */}
@@ -167,7 +171,7 @@ export default function HeroContent() {
           {/* All 3 chapters share one grid cell (row-start-1/col-start-1) so
               the block is always sized to whichever is tallest and bottom-
               aligned within it — GSAP crossfades which one is visible. */}
-          <div className="mt-4 grid">
+          <div className="mt-3 grid md:mt-4">
             {CHAPTERS.map((chapter, index) => (
               <div
                 key={index}
@@ -181,7 +185,22 @@ export default function HeroContent() {
                   .filter(Boolean)
                   .join(" ")}
               >
-                <h1 className="font-heading font-bold uppercase leading-[1.02] tracking-[-0.04em] text-text text-[clamp(3rem,7vw,7rem)]">
+                <h1
+                  className={[
+                    "font-heading font-bold uppercase tracking-[-0.04em] text-text",
+                    // Font size: distinct clamp() per tier, not one formula
+                    // scaled continuously — mobile/tablet/desktop each need
+                    // their own ceiling so the heading never overpowers the
+                    // frame (desktop) or overflows it (mobile).
+                    "text-[clamp(2rem,9vw,3rem)] md:text-[clamp(2.8rem,6vw,4rem)] lg:text-[clamp(3.5rem,5vw,5.5rem)]",
+                    // Max-width caps how far the heading can stretch at
+                    // each tier, so it reads as a column of text beside the
+                    // machine rather than a banner across the whole scene.
+                    "max-w-[330px] md:max-w-[650px] lg:max-w-[900px]",
+                    // Line-height tightens as the type gets larger.
+                    "leading-[1.05] md:leading-[1.0] lg:leading-[0.95]",
+                  ].join(" ")}
+                >
                   {chapter.heading.map((line, lineIndex) => (
                     <span key={lineIndex} className="block">
                       {line}
@@ -189,7 +208,7 @@ export default function HeroContent() {
                   ))}
                 </h1>
 
-                <div className="text-body-lg mt-5 max-w-[var(--max-w-prose)] text-text-muted">
+                <div className="text-body mt-4 max-w-[var(--max-w-prose)] text-text-muted md:mt-5 md:text-body-lg">
                   {chapter.description.map((line, lineIndex) => (
                     <span key={lineIndex} className="block">
                       {line}
